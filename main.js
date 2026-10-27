@@ -224,7 +224,7 @@ function buildPages() {
       page.classList.add('q-essay');
       page.innerHTML = `<p class="q-num">第${NUMERALS[4]}題</p>`
         + `<h2 class="q-text"><label for="answerBox">${ESSAY}</label></h2>`
-        + '<textarea class="answer-box" id="answerBox" rows="3" maxlength="200" placeholder="寫在這裡（也可以留空）"></textarea>';
+        + '<textarea class="answer-box" id="answerBox" rows="3" maxlength="200" placeholder="寫在這裡（也可以直接說出來）"></textarea>';
     } else if (p.kind === 'score') {
       page.innerHTML = '<p class="score-label">你的成績</p>'
         + '<p class="score" aria-label="100 分"><span class="score-num" id="scoreNum">0</span><span class="score-unit">分</span>'
