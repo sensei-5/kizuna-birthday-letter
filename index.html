@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>給絆唱吉的一封信</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cpath fill='%23e8b85c' d='M25 9a12 12 0 1 0 7 19a10 10 0 1 1-7-19z'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&display=swap">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- 夜空：星星（canvas）、月亮、吉他弦 -->
+  <div class="sky" aria-hidden="true">
+    <canvas id="sky"></canvas>
+    <div class="moon"><span class="moon-crater c1"></span><span class="moon-crater c2"></span><span class="moon-crater c3"></span></div>
+    <svg class="guitar" id="guitar" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice">
+      <g class="headstock">
+        <path class="headstock-body" d="M-40 800 C 40 790, 120 780, 196 790 L 214 990 C 140 1000, 40 1010, -40 1020 Z"/>
+        <rect class="nut" x="198" y="800" width="16" height="182" rx="3" transform="rotate(-4 206 891)"/>
+        <g class="pegs">
+          <circle cx="58" cy="826" r="13"/><circle cx="118" cy="818" r="13"/><circle cx="170" cy="812" r="13"/>
+          <circle cx="58" cy="988" r="13"/><circle cx="118" cy="980" r="13"/><circle cx="170" cy="972" r="13"/>
+        </g>
+      </g>
+      <g class="strings" id="strings"></g>
+    </svg>
+  </div>
+
+  <button class="music-toggle" id="musicToggle" type="button" aria-pressed="true" aria-label="背景音樂：開">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path class="note" d="M9 18.5a2.5 2.5 0 1 1-2.5-2.5c.9 0 1.7.3 2.5.8V5l11-2v12.5a2.5 2.5 0 1 1-2.5-2.5c.9 0 1.7.3 2.5.8V7.2L9 9.2z"/><path class="slash" d="M3 3l18 18"/></svg>
+    <span class="music-label" id="musicLabel">音樂</span>
+  </button>
+
+  <main class="stage">
+    <!-- 信封 -->
+    <section class="scene scene-envelope" id="sceneEnvelope">
+      <button class="envelope" id="envelope" type="button" aria-label="拆開信封">
+        <span class="env-back"></span>
+        <span class="env-letter"><span class="env-letter-line"></span><span class="env-letter-line"></span><span class="env-letter-line short"></span></span>
+        <svg class="env-front" viewBox="0 0 160 100" preserveAspectRatio="none" aria-hidden="true"><path d="M0 0 L80 56 L160 0 V100 H0 Z"/></svg>
+        <span class="env-flap"><svg viewBox="0 0 160 60" preserveAspectRatio="none" aria-hidden="true"><path d="M0 0 H160 L80 60 Z"/></svg></span>
+        <span class="env-seal" aria-hidden="true"><svg viewBox="0 0 40 40"><path d="M25 9a12 12 0 1 0 7 19a10 10 0 1 1-7-19z"/></svg></span>
+        <span class="env-address">給 絆唱吉</span>
+      </button>
+      <p class="env-hint" id="envHint">點一下，拆開這封信</p>
+    </section>
+
+    <!-- 信紙 -->
+    <section class="scene scene-letter" id="sceneLetter" hidden>
+      <div class="paper" id="paper" tabindex="-1">
+        <div class="pages" id="pages" aria-live="polite"></div>
+        <div class="paper-foot">
+          <ol class="progress" id="progress" aria-label="進度"></ol>
+          <button class="next" id="nextBtn" type="button">下一頁<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6"/></svg></button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- 慶祝特效（成績頁） -->
+  <canvas class="fx" id="fx" aria-hidden="true"></canvas>
+
+  <!-- 禮物影片 -->
+  <div class="video-layer" id="videoLayer" role="dialog" aria-modal="true" aria-label="禮物影片" hidden>
+    <div class="video-frame">
+      <video id="giftVideo" playsinline preload="metadata" controls></video>
+    </div>
+    <p class="video-error" id="videoError" hidden>影片載入失敗，請確認 assets 裡的影片檔</p>
+    <button class="video-close" id="videoClose" type="button">關閉</button>
+  </div>
+
+  <audio id="bgm" loop preload="auto"></audio>
+
+  <script src="main.js"></script>
+</body>
+</html>
