@@ -68,6 +68,7 @@ const els = {
   pages: $('pages'),
   progress: $('progress'),
   next: $('nextBtn'),
+  prev: $('prevBtn'),
   musicCtrl: $('musicCtrl'),
   musicToggle: $('musicToggle'),
   volumeBtn: $('volumeBtn'),
@@ -261,10 +262,17 @@ function canAdvance() {
   return p.kind !== 'final';
 }
 
+// 可以回到上一頁修改答案；成績頁之後就不回頭（分數已經公布了）
+function canRetreat() {
+  const kind = PAGES[state.page].kind;
+  return state.page > 0 && kind !== 'score' && kind !== 'final';
+}
+
 function updateNav() {
   const p = PAGES[state.page];
   els.next.hidden = p.kind === 'final';
   els.next.disabled = !canAdvance();
+  els.prev.classList.toggle('is-off', !canRetreat());
   [...els.progress.children].forEach((dot, i) => {
     dot.classList.toggle('is-done', i < state.page);
     dot.classList.toggle('is-here', i === state.page);
@@ -319,26 +327,36 @@ els.envelope.addEventListener('click', openEnvelope);
 /* ==========================================================
    翻頁
    ========================================================== */
-async function advance() {
+function advance() {
   if (!state.opened) { openEnvelope(); return; }
   if (state.busy || state.videoOpen || !canAdvance()) return;
+  turn(1);
+}
+function retreat() {
+  if (!state.opened || state.busy || state.videoOpen || !canRetreat()) return;
+  turn(-1);
+}
+
+// dir = 1 往後翻，-1 往前翻（動畫方向相反）
+async function turn(dir) {
   state.busy = true;
 
+  const fromKind = PAGES[state.page].kind;
   const from = pageEl(state.page);
-  state.page += 1;
+  state.page += dir;
   const to = pageEl(state.page);
   const kind = PAGES[state.page].kind;
   const unlock = wait(kind === 'score' && !reduceMotion.matches ? CONFIG.scoreLockMs : CONFIG.turnLockMs);
 
   if (kind === 'final') prepareFinal();
-  if (PAGES[state.page - 1].kind === 'score') sparkles.length = 0; // 成績頁的星星不要飄到下一頁
+  if (fromKind === 'score') sparkles.length = 0; // 成績頁的星星不要飄到下一頁
   pluck(state.page % 6);
 
   const rm = reduceMotion.matches;
   const outFrames = rm ? [{ opacity: 1 }, { opacity: 0 }]
-    : [{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateX(-5%) rotate(-1deg)' }];
+    : [{ opacity: 1, transform: 'none' }, { opacity: 0, transform: `translateX(${-5 * dir}%) rotate(${-dir}deg)` }];
   const inFrames = rm ? [{ opacity: 0 }, { opacity: 1 }]
-    : [{ opacity: 0, transform: 'translateX(5%)' }, { opacity: 1, transform: 'none' }];
+    : [{ opacity: 0, transform: `translateX(${5 * dir}%)` }, { opacity: 1, transform: 'none' }];
 
   await from.animate(outFrames, { duration: rm ? 160 : 240, easing: 'cubic-bezier(0.23, 1, 0.32, 1)' }).finished;
   from.classList.remove('is-current');
@@ -350,7 +368,8 @@ async function advance() {
     $('answerBox').focus({ preventScroll: true });
   } else {
     // 把焦點從上一頁的按鈕移走，避免空白鍵觸發到看不見的按鈕
-    if (document.activeElement && els.pages.contains(document.activeElement)) els.paper.focus({ preventScroll: true });
+    const active = document.activeElement;
+    if (active && (els.pages.contains(active) || (active === els.prev && !canRetreat()))) els.paper.focus({ preventScroll: true });
   }
   if (kind === 'score') celebrate(to);
 
@@ -358,6 +377,7 @@ async function advance() {
   state.busy = false;
 }
 els.next.addEventListener('click', advance);
+els.prev.addEventListener('click', retreat);
 
 function prepareFinal() {
   const text = $('answerBox').value.trim();
@@ -528,6 +548,11 @@ document.addEventListener('keydown', (e) => {
   if (e.key === ' ' || e.key === 'ArrowRight') {
     e.preventDefault(); // 也擋掉空白鍵對（滑鼠點過的）焦點按鈕的 click
     if (!e.repeat) advance();
+    return;
+  }
+  if (e.key === 'ArrowLeft') {
+    e.preventDefault();
+    if (!e.repeat) retreat();
     return;
   }
   const p = PAGES[state.page];
