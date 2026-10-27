@@ -28,10 +28,19 @@
     </svg>
   </div>
 
-  <button class="music-toggle" id="musicToggle" type="button" aria-pressed="true" aria-label="背景音樂：開">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path class="note" d="M9 18.5a2.5 2.5 0 1 1-2.5-2.5c.9 0 1.7.3 2.5.8V5l11-2v12.5a2.5 2.5 0 1 1-2.5-2.5c.9 0 1.7.3 2.5.8V7.2L9 9.2z"/><path class="slash" d="M3 3l18 18"/></svg>
-    <span class="music-label" id="musicLabel">音樂</span>
-  </button>
+  <div class="music-ctrl" id="musicCtrl">
+    <button class="volume-btn" id="volumeBtn" type="button" aria-label="調整音量" aria-expanded="false" aria-controls="volumePop">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path class="spk" d="M4 9h4l5-4v14l-5-4H4z"/><path class="wave" d="M16 9.2a4 4 0 0 1 0 5.6M18.6 6.6a7.6 7.6 0 0 1 0 10.8"/></svg>
+    </button>
+    <button class="music-toggle" id="musicToggle" type="button" aria-pressed="true" aria-label="背景音樂：開">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path class="note" d="M9 18.5a2.5 2.5 0 1 1-2.5-2.5c.9 0 1.7.3 2.5.8V5l11-2v12.5a2.5 2.5 0 1 1-2.5-2.5c.9 0 1.7.3 2.5.8V7.2L9 9.2z"/><path class="slash" d="M3 3l18 18"/></svg>
+      <span class="music-label" id="musicLabel">音樂</span>
+    </button>
+    <div class="volume-pop" id="volumePop" hidden>
+      <input type="range" id="volumeSlider" min="0" max="100" step="1" aria-label="背景音樂音量">
+      <span class="volume-num" id="volumeNum" aria-hidden="true"></span>
+    </div>
+  </div>
 
   <main class="stage">
     <!-- 信封 -->

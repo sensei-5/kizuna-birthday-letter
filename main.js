@@ -7,7 +7,7 @@ const CONFIG = {
   youtube: 'https://www.youtube.com/watch?v=6Wi2W2i5rh0',
   videoSrc: 'assets/video.mp4',
   bgmSrc: 'assets/bgm.mp3',
-  bgmVolume: 0.6,      // 背景音樂音量（0–1）
+  bgmVolume: 0.3,      // 背景音樂預設音量（0–1）；觀眾用音量拉桿調過後會記在自己的瀏覽器
   bgmFadeInMs: 2000,   // 淡入
   bgmFadeOutMs: 900,   // 淡出
   bgmToVideoMs: 350,   // 開影片時的淡出（短一點，避免和影片聲音重疊太久）
@@ -68,7 +68,12 @@ const els = {
   pages: $('pages'),
   progress: $('progress'),
   next: $('nextBtn'),
+  musicCtrl: $('musicCtrl'),
   musicToggle: $('musicToggle'),
+  volumeBtn: $('volumeBtn'),
+  volumePop: $('volumePop'),
+  volumeSlider: $('volumeSlider'),
+  volumeNum: $('volumeNum'),
   musicLabel: $('musicLabel'),
   bgm: $('bgm'),
   videoLayer: $('videoLayer'),
@@ -87,6 +92,12 @@ els.bgm.volume = 0;
    ========================================================== */
 // iOS Safari 的 volume 是唯讀（永遠 1）：淡入淡出做不到，改成直接播放 / 暫停
 const canSetVolume = (() => { const a = new Audio(); a.volume = 0.5; return a.volume === 0.5; })();
+
+let bgmVolume = CONFIG.bgmVolume;
+try {
+  const saved = parseFloat(localStorage.getItem('bgmVolume'));
+  if (saved >= 0 && saved <= 1) bgmVolume = saved;
+} catch (e) { /* 讀不到就用預設 */ }
 
 let fadeTimer = 0;
 function fadeBgm(target, ms, done) {
@@ -125,13 +136,13 @@ function syncMusic() {
     if (els.bgm.paused) {
       els.bgm.play().then(() => {
         audioUnlocked = true;
-        fadeBgm(CONFIG.bgmVolume, CONFIG.bgmFadeInMs);
+        fadeBgm(bgmVolume, CONFIG.bgmFadeInMs);
       }).catch(() => {
         if (!audioUnlocked) waitForGesture();
         else if (els.bgm.paused) setMusicOn(false); // 播過之後又被擋：音樂鈕切成「關」，讓使用者點一下重試
       });
     } else {
-      fadeBgm(CONFIG.bgmVolume, CONFIG.bgmFadeInMs);
+      fadeBgm(bgmVolume, CONFIG.bgmFadeInMs);
     }
   } else if (!els.bgm.paused) {
     fadeBgm(0, videoPlaying ? CONFIG.bgmToVideoMs : CONFIG.bgmFadeOutMs, () => els.bgm.pause());
@@ -148,6 +159,36 @@ els.musicToggle.addEventListener('click', () => {
   setMusicOn(!state.musicOn);
   syncMusic();
 });
+
+// 音量拉桿：調過的音量記在觀眾自己的瀏覽器，下次打開沿用
+function setBgmVolume(v) {
+  bgmVolume = v;
+  els.volumeSlider.value = String(Math.round(v * 100));
+  els.volumeNum.textContent = String(Math.round(v * 100));
+  const audible = state.musicOn && !(state.videoOpen && !state.videoEnded) && !els.bgm.paused;
+  if (audible) { clearInterval(fadeTimer); els.bgm.volume = v; }
+}
+function openVolume(open) {
+  els.volumePop.hidden = !open;
+  els.volumeBtn.setAttribute('aria-expanded', String(open));
+}
+
+if (canSetVolume) {
+  setBgmVolume(bgmVolume);
+  els.volumeBtn.addEventListener('click', () => openVolume(els.volumePop.hidden));
+  els.volumeSlider.addEventListener('input', () => setBgmVolume(Number(els.volumeSlider.value) / 100));
+  els.volumeSlider.addEventListener('change', () => {
+    try { localStorage.setItem('bgmVolume', String(bgmVolume)); } catch (e) { /* 無痕模式等存不了就算了 */ }
+  });
+  document.addEventListener('pointerdown', (e) => {
+    if (!els.volumePop.hidden && !els.musicCtrl.contains(e.target)) openVolume(false);
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !els.volumePop.hidden) { openVolume(false); els.volumeBtn.focus(); }
+  });
+} else {
+  els.volumeBtn.hidden = true; // iOS 不能用程式調音量，只能用手機的音量鍵
+}
 
 /* ==========================================================
    建立信紙頁面
@@ -435,7 +476,8 @@ function openVideo() {
   state.videoEnded = false;
   els.videoLayer.hidden = false;
   els.stage.inert = true;
-  els.musicToggle.inert = true;
+  openVolume(false);
+  els.musicCtrl.inert = true;
   els.videoError.hidden = true;
   giftPlayFromStart(); // 「再看一次」一律從頭播
   syncMusic();
@@ -448,7 +490,7 @@ function closeVideo() {
   giftPause();
   state.videoOpen = false;
   els.stage.inert = false;
-  els.musicToggle.inert = false;
+  els.musicCtrl.inert = false;
   syncMusic();
   els.videoLayer.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200, easing: 'ease-out' })
     .finished.then(() => { if (!state.videoOpen) els.videoLayer.hidden = true; });

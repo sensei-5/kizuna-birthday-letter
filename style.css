@@ -65,16 +65,53 @@ button { font: inherit; color: inherit; }
 .strings path { fill: none; stroke: var(--string); stroke-linecap: round; opacity: 0.42; }
 
 /* ============ Music toggle ============ */
-.music-toggle {
+.music-ctrl {
   position: fixed;
   top: max(16px, calc(var(--u) * 1.6), env(safe-area-inset-top));
   right: max(16px, calc(var(--u) * 1.6), env(safe-area-inset-right));
   z-index: 30;
+  display: flex;
+  gap: 0.5em;
+  font-size: max(16px, calc(var(--u) * 1.25));
+}
+.volume-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 2.3em;
+  height: 2.3em;
+  padding: 0;
+  font-size: inherit;
+  color: var(--moon);
+  background: var(--night-soft);
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: transform 140ms var(--ease-out), background-color 200ms ease;
+}
+.volume-btn svg { width: 1.3em; height: 1.3em; }
+.volume-btn .spk { fill: currentColor; }
+.volume-btn .wave { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.volume-btn:active { transform: scale(0.96); }
+.volume-pop {
+  position: absolute;
+  top: calc(100% + 0.5em);
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+  padding: 0.6em 0.9em;
+  background: var(--night-soft);
+  border-radius: 999px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+}
+.volume-pop input { width: 9em; accent-color: var(--moon); cursor: pointer; }
+.volume-num { min-width: 2em; text-align: right; color: var(--moon); font-variant-numeric: tabular-nums; }
+.music-toggle {
   display: inline-flex;
   align-items: center;
   gap: 0.4em;
   padding: 0.45em 0.9em 0.45em 0.7em;
-  font-size: max(16px, calc(var(--u) * 1.25));
+  font-size: inherit;
   color: var(--moon);
   background: var(--night-soft);
   border: 0;
@@ -89,7 +126,7 @@ button { font: inherit; color: inherit; }
 .music-toggle[aria-pressed="false"] .slash { opacity: 1; }
 .music-toggle:active { transform: scale(0.96); }
 @media (hover: hover) and (pointer: fine) {
-  .music-toggle:hover { background: #222c5c; }
+  .music-toggle:hover, .volume-btn:hover { background: #222c5c; }
 }
 
 /* ============ Stage ============ */
@@ -473,6 +510,6 @@ button { font: inherit; color: inherit; }
 @media (prefers-reduced-motion: reduce) {
   .env-hint { animation: none; opacity: 1; }
   .circle-mark path, .page-score.is-graded .score-mark path { transition: stroke-dashoffset 1ms; }
-  .envelope, .option, .next, .gift-btn, .music-toggle, .video-close { transition: background-color 200ms ease, opacity 200ms ease; }
+  .envelope, .option, .next, .gift-btn, .music-toggle, .volume-btn, .video-close { transition: background-color 200ms ease, opacity 200ms ease; }
   .envelope:hover, .envelope:active { transform: none !important; }
 }
