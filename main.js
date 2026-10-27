@@ -262,10 +262,9 @@ function canAdvance() {
   return p.kind !== 'final';
 }
 
-// 可以回到上一頁修改答案；成績頁之後就不回頭（分數已經公布了）
+// 禮物頁之前都可以回上一頁修改答案
 function canRetreat() {
-  const kind = PAGES[state.page].kind;
-  return state.page > 0 && kind !== 'score' && kind !== 'final';
+  return state.page > 0 && PAGES[state.page].kind !== 'final';
 }
 
 function updateNav() {
@@ -349,7 +348,10 @@ async function turn(dir) {
   const unlock = wait(kind === 'score' && !reduceMotion.matches ? CONFIG.scoreLockMs : CONFIG.turnLockMs);
 
   if (kind === 'final') prepareFinal();
-  if (fromKind === 'score') sparkles.length = 0; // 成績頁的星星不要飄到下一頁
+  if (fromKind === 'score') {
+    sparkles.length = 0; // 成績頁的星星不要飄到下一頁
+    if (dir < 0) { from.classList.remove('is-graded'); $('scoreNum').textContent = '0'; } // 再進成績頁時重播數分數、畫紅圈
+  }
   pluck(state.page % 6);
 
   const rm = reduceMotion.matches;
