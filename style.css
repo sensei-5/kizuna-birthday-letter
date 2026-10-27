@@ -74,7 +74,7 @@ button { font: inherit; color: inherit; }
   align-items: center;
   gap: 0.4em;
   padding: 0.45em 0.9em 0.45em 0.7em;
-  font-size: clamp(16px, calc(var(--u) * 1.25), 26px);
+  font-size: max(16px, calc(var(--u) * 1.25));
   color: var(--moon);
   background: var(--night-soft);
   border: 0;
@@ -154,13 +154,13 @@ button { font: inherit; color: inherit; }
   z-index: 4;
   text-align: center;
   color: var(--moon);
-  font-size: clamp(22px, calc(var(--u) * 2.6), 54px);
+  font-size: max(22px, calc(var(--u) * 2.6));
   letter-spacing: 0.08em;
 }
 .env-hint {
   margin: calc(var(--u) * 3) 0 0;
   color: var(--moon);
-  font-size: clamp(18px, calc(var(--u) * 1.8), 36px);
+  font-size: max(18px, calc(var(--u) * 1.8));
   animation: hint-breathe 2.8s ease-in-out infinite;
 }
 @keyframes hint-breathe { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
@@ -210,7 +210,7 @@ button { font: inherit; color: inherit; }
 /* 信件文字 */
 .letter-text {
   margin: 0;
-  font-size: clamp(24px, calc(var(--u) * 3.2), 66px);
+  font-size: max(24px, calc(var(--u) * 3.2));
   line-height: 1.6;
   color: var(--ink);
 }
@@ -226,16 +226,16 @@ button { font: inherit; color: inherit; }
 /* 測驗 */
 .q-num {
   margin: 0 0 0.3em;
-  font-size: clamp(18px, calc(var(--u) * 1.7), 34px);
+  font-size: max(18px, calc(var(--u) * 1.7));
   color: var(--red-pen);
 }
 .q-text {
   margin: 0 0 calc(var(--u) * 2.2);
-  font-size: clamp(26px, calc(var(--u) * 3.2), 64px);
+  font-size: max(26px, calc(var(--u) * 3.2));
   line-height: 1.3;
   font-weight: 700;
 }
-.q-essay .q-text { font-size: clamp(22px, calc(var(--u) * 2.6), 52px); }
+.q-essay .q-text { font-size: max(22px, calc(var(--u) * 2.6)); }
 .options {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -248,7 +248,7 @@ button { font: inherit; color: inherit; }
   gap: 0.35em;
   padding: 0.35em 0.9em 0.35em 1.5em; /* 左邊留給紅圈的弧線，不要壓到 A/B/C/D */
   text-align: left;
-  font-size: clamp(19px, calc(var(--u) * 2.2), 44px);
+  font-size: max(19px, calc(var(--u) * 2.2));
   line-height: 1.3;
   color: var(--ink);
   background: transparent;
@@ -289,7 +289,7 @@ button { font: inherit; color: inherit; }
   resize: none;
   padding: 0.5em 0.7em;
   font: inherit;
-  font-size: clamp(20px, calc(var(--u) * 2.3), 46px);
+  font-size: max(20px, calc(var(--u) * 2.3));
   line-height: 1.5;
   color: var(--ink);
   background: rgba(255, 255, 255, 0.55);
@@ -301,7 +301,7 @@ button { font: inherit; color: inherit; }
 
 /* 成績 */
 .page-score { align-items: center; text-align: center; }
-.score-label { margin: 0; font-size: clamp(22px, calc(var(--u) * 2.4), 48px); color: var(--ink-soft); }
+.score-label { margin: 0; font-size: max(22px, calc(var(--u) * 2.4)); color: var(--ink-soft); }
 .score {
   position: relative;
   margin: 0.05em 0 0;
@@ -311,8 +311,8 @@ button { font: inherit; color: inherit; }
   font-weight: 700;
   line-height: 1;
 }
-.score-num { font-size: clamp(110px, calc(var(--u) * 13), 260px); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
-.score-unit { font-size: clamp(36px, calc(var(--u) * 4), 80px); margin-left: 0.15em; }
+.score-num { font-size: max(110px, calc(var(--u) * 13)); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.score-unit { font-size: max(36px, calc(var(--u) * 4)); margin-left: 0.15em; }
 .score-mark {
   position: absolute;
   left: -14%; top: -6%;
@@ -322,14 +322,14 @@ button { font: inherit; color: inherit; }
 }
 .score-mark path { fill: none; stroke: var(--red-pen); stroke-width: 4; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1; opacity: 0; }
 .page-score.is-graded .score-mark path { stroke-dashoffset: 0; opacity: 1; transition: stroke-dashoffset 900ms var(--ease-out) 900ms, opacity 0s 900ms; }
-.score-note { margin: 0.6em 0 0; font-size: clamp(22px, calc(var(--u) * 2.6), 52px); }
+.score-note { margin: 0.6em 0 0; font-size: max(22px, calc(var(--u) * 2.6)); }
 
 /* 最後一張 */
 .answer-quote {
   position: relative;
   margin: 0 0 calc(var(--u) * 2.4);
   padding: 0.2em 0 0.2em 1em;
-  font-size: clamp(20px, calc(var(--u) * 2.4), 48px);
+  font-size: max(20px, calc(var(--u) * 2.4));
   line-height: 1.5;
   color: var(--ink);
   border-left: 5px solid var(--gold);
@@ -342,7 +342,7 @@ button { font: inherit; color: inherit; }
 .answer-quote::after { content: "」"; }
 .gift-line {
   margin: 0;
-  font-size: clamp(28px, calc(var(--u) * 3.8), 76px);
+  font-size: max(28px, calc(var(--u) * 3.8));
   font-weight: 700;
   line-height: 1.3;
 }
@@ -353,7 +353,7 @@ button { font: inherit; color: inherit; }
   gap: 0.45em;
   margin-top: calc(var(--u) * 2.4);
   padding: 0.5em 1.2em;
-  font-size: clamp(20px, calc(var(--u) * 2.2), 44px);
+  font-size: max(20px, calc(var(--u) * 2.2));
   color: var(--paper);
   background: var(--red-pen);
   border: 0;
@@ -375,9 +375,9 @@ button { font: inherit; color: inherit; }
   gap: 16px;
   padding-top: calc(var(--u) * 1.2);
 }
-.progress { display: flex; gap: clamp(6px, calc(var(--u) * 0.7), 14px); margin: 0; padding: 0; list-style: none; }
+.progress { display: flex; gap: max(6px, calc(var(--u) * 0.7)); margin: 0; padding: 0; list-style: none; }
 .progress li {
-  width: clamp(10px, calc(var(--u) * 1.1), 22px);
+  width: max(10px, calc(var(--u) * 1.1));
   aspect-ratio: 1;
   background: rgba(29, 40, 88, 0.18);
   clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
@@ -393,7 +393,7 @@ button { font: inherit; color: inherit; }
   align-items: center;
   gap: 0.35em;
   padding: 0.4em 1em;
-  font-size: clamp(20px, calc(var(--u) * 2), 40px);
+  font-size: max(20px, calc(var(--u) * 2));
   color: var(--paper);
   background: var(--ink);
   border: 0;
@@ -428,7 +428,7 @@ button { font: inherit; color: inherit; }
   top: max(16px, calc(var(--u) * 1.6), env(safe-area-inset-top));
   right: max(16px, calc(var(--u) * 1.6), env(safe-area-inset-right));
   padding: 0.4em 1.1em;
-  font-size: clamp(18px, calc(var(--u) * 1.6), 32px);
+  font-size: max(18px, calc(var(--u) * 1.6));
   color: var(--moon);
   background: var(--night-soft);
   border: 0;
@@ -437,7 +437,7 @@ button { font: inherit; color: inherit; }
   transition: transform 140ms var(--ease-out), background-color 200ms ease;
 }
 .video-close:active { transform: scale(0.96); }
-.video-error { margin: 0; color: var(--moon); font-size: clamp(18px, calc(var(--u) * 1.8), 36px); text-align: center; }
+.video-error { margin: 0; color: var(--moon); font-size: max(18px, calc(var(--u) * 1.8)); text-align: center; }
 @media (hover: hover) and (pointer: fine) {
   .video-close:hover { background: #222c5c; }
 }

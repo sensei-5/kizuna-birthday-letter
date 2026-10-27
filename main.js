@@ -437,6 +437,7 @@ const skyCtx = sky.getContext('2d');
 const fx = $('fx');
 const fxCtx = fx.getContext('2d');
 let W = 0, H = 0, DPR = 1;
+let K = 1; // 畫布元素的縮放：以 1920×1080 為 1，螢幕更大時跟著放大（4K = 2）
 let stars = [];
 const meteors = [];   // 夜空層（信紙後面）
 const sparkles = [];  // 前景層（成績周圍）
@@ -444,16 +445,17 @@ const sparkles = [];  // 前景層（成績周圍）
 function resize() {
   DPR = Math.min(window.devicePixelRatio || 1, 2);
   W = window.innerWidth; H = window.innerHeight;
+  K = Math.max(1, Math.min(W / 1920, H / 1080));
   for (const c of [sky, fx]) {
     c.width = Math.round(W * DPR); c.height = Math.round(H * DPR);
   }
   skyCtx.setTransform(DPR, 0, 0, DPR, 0, 0);
   fxCtx.setTransform(DPR, 0, 0, DPR, 0, 0);
-  const count = Math.round(Math.min(CONFIG.starMax, W * H * CONFIG.starDensity));
+  const count = Math.round(Math.min(CONFIG.starMax, (W * H * CONFIG.starDensity) / (K * K))); // 大螢幕星星跟著變大，數量維持和 1080p 一樣的觀感
   stars = Array.from({ length: count }, () => ({
     x: Math.random() * W,
     y: Math.random() * H * 0.92,
-    r: Math.random() < 0.88 ? 0.6 + Math.random() * 0.9 : 1.6 + Math.random() * 0.9,
+    r: K * (Math.random() < 0.88 ? 0.6 + Math.random() * 0.9 : 1.6 + Math.random() * 0.9),
     a: 0.35 + Math.random() * 0.55,
     speed: 0.6 + Math.random() * 1.6,
     phase: Math.random() * Math.PI * 2,
@@ -479,14 +481,14 @@ function drawSky(t) {
 
 function spawnMeteor(list, delay = 0) {
   const fromLeft = Math.random() < 0.5;
-  const speed = 900 + Math.random() * 700; // px/s
+  const speed = K * (900 + Math.random() * 700); // px/s
   const angle = (fromLeft ? 1 : -1) * (Math.PI / 5 + Math.random() * 0.25);
   list.push({
     x: fromLeft ? Math.random() * W * 0.6 : W * 0.4 + Math.random() * W * 0.6,
     y: -20 + Math.random() * H * 0.35,
     vx: Math.sin(angle) * speed,
     vy: Math.cos(angle) * speed,
-    len: 140 + Math.random() * 160,
+    len: K * (140 + Math.random() * 160),
     life: 0,
     max: 0.9 + Math.random() * 0.6,
     delay,
@@ -505,7 +507,7 @@ function drawMeteors(ctx, list) {
     g.addColorStop(0, `rgba(255, 246, 220, ${alpha})`);
     g.addColorStop(1, 'rgba(255, 246, 220, 0)');
     ctx.strokeStyle = g;
-    ctx.lineWidth = 2.2;
+    ctx.lineWidth = 2.2 * K;
     ctx.lineCap = 'round';
     ctx.beginPath(); ctx.moveTo(m.x, m.y); ctx.lineTo(tx, ty); ctx.stroke();
   }
@@ -534,11 +536,11 @@ function sparkleBurst(still) {
   for (let i = 0; i < 46; i++) {
     const a = Math.random() * Math.PI * 2;
     const d = still ? r.width * (0.6 + Math.random() * 0.5) : 0;
-    const v = still ? 0 : 220 + Math.random() * 420;
+    const v = still ? 0 : K * (220 + Math.random() * 420);
     sparkles.push({
       x: cx + Math.cos(a) * d, y: cy + Math.sin(a) * d * 0.6,
       vx: Math.cos(a) * v, vy: Math.sin(a) * v * 0.7,
-      size: 5 + Math.random() * 9,
+      size: K * (5 + Math.random() * 9),
       rot: Math.random() * Math.PI,
       color: colors[i % colors.length],
       life: 0, max: 1.2 + Math.random() * 0.9,
