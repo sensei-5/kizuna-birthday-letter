@@ -422,7 +422,8 @@ button { font: inherit; color: inherit; }
   background: rgba(5, 8, 22, 0.92);
 }
 .video-frame { width: min(92vw, calc(84vh * 16 / 9)); }
-.video-frame video { display: block; width: 100%; aspect-ratio: 16 / 9; background: #000; border-radius: 6px; }
+.video-frame video,
+.video-frame iframe { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; border: 0; background: #000; border-radius: 6px; }
 .video-close {
   position: absolute;
   top: max(16px, calc(var(--u) * 1.6), env(safe-area-inset-top));

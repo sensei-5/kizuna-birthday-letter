@@ -1,7 +1,10 @@
 /* ==========================================================
-   CONFIG — 換最終版影片時只要改 videoSrc
+   CONFIG — 換影片時只要改 youtube（或 videoSrc）
    ========================================================== */
 const CONFIG = {
+  // 禮物影片：填 YouTube 網址（或 11 碼影片 ID）就用 YouTube 播；留空 '' 則改播 videoSrc 的 mp4
+  // YouTube 影片要設成「不公開」（不能是「私人」），並允許嵌入
+  youtube: 'https://www.youtube.com/watch?v=6Wi2W2i5rh0',
   videoSrc: 'assets/video.mp4',
   bgmSrc: 'assets/bgm.mp3',
   bgmVolume: 0.6,      // 背景音樂音量（0–1）
@@ -77,7 +80,6 @@ const els = {
 
 els.bgm.src = CONFIG.bgmSrc;
 els.bgm.volume = 0;
-els.video.src = CONFIG.videoSrc;
 
 /* ==========================================================
    Background music：用 audio.volume 做淡入淡出
@@ -346,8 +348,87 @@ function celebrate(page) {
 }
 
 /* ==========================================================
-   禮物影片
+   禮物影片：YouTube（CONFIG.youtube）或 mp4（CONFIG.videoSrc）
+   兩種都走同一組事件：onGiftPlay / onGiftEnded / onGiftError
    ========================================================== */
+function onGiftPlay() {
+  els.videoError.hidden = true;
+  if (state.videoOpen && state.videoEnded) { state.videoEnded = false; syncMusic(); } // 用控制列重播時再淡出
+}
+function onGiftEnded() { state.videoEnded = true; syncMusic(); }
+function onGiftError(message) {
+  els.videoError.textContent = message;
+  els.videoError.hidden = false;
+  state.videoEnded = true;
+  syncMusic();
+}
+
+function parseYoutubeId(s) {
+  if (!s) return '';
+  const m = s.match(/(?:v=|youtu\.be\/|embed\/|shorts\/|live\/)([\w-]{11})/);
+  return m ? m[1] : (/^[\w-]{11}$/.test(s) ? s : '');
+}
+const YT_ID = parseYoutubeId(CONFIG.youtube);
+
+let yt = null;          // YT.Player
+let ytReady = false;
+let ytPending = false;  // 播放器還沒準備好時就按了禮物
+let ytFailed = '';      // API 載入失敗的訊息
+
+if (YT_ID) {
+  els.video.remove();
+  window.onYouTubeIframeAPIReady = () => {
+    yt = new YT.Player('ytPlayer', {
+      videoId: YT_ID,
+      playerVars: { playsinline: 1, rel: 0 },
+      events: {
+        onReady: () => {
+          ytReady = true;
+          if (ytPending && state.videoOpen) yt.playVideo();
+          ytPending = false;
+        },
+        onStateChange: (e) => {
+          if (e.data === YT.PlayerState.PLAYING) onGiftPlay();
+          else if (e.data === YT.PlayerState.ENDED) onGiftEnded();
+        },
+        // 101 / 150：影片不允許嵌入（多半是版權或上傳設定）；100：影片不存在或是「私人」；153：缺少來源（用 file:// 開啟）
+        onError: (e) => onGiftError(
+          e.data === 101 || e.data === 150 ? '這支 YouTube 影片不允許嵌入播放（請確認上傳設定或版權聲明）'
+          : e.data === 100 ? '找不到這支 YouTube 影片（可能被刪除或設成「私人」）'
+          : e.data === 153 ? 'YouTube 影片要從網址開啟網頁才能播放，不能直接雙擊 html 檔'
+          : `YouTube 影片無法播放（錯誤 ${e.data}）`),
+      },
+    });
+  };
+  const api = document.createElement('script');
+  api.src = 'https://www.youtube.com/iframe_api';
+  api.onerror = () => { ytFailed = 'YouTube 載入失敗，請檢查網路連線'; };
+  document.head.appendChild(api);
+} else {
+  $('ytPlayer').remove();
+  els.video.src = CONFIG.videoSrc;
+  els.video.addEventListener('ended', onGiftEnded);
+  els.video.addEventListener('error', () => onGiftError('影片載入失敗，請確認 assets 裡的影片檔'));
+  els.video.addEventListener('play', onGiftPlay);
+}
+
+function giftPlayFromStart() {
+  if (!YT_ID) {
+    els.video.currentTime = 0;
+    // 播不起來（被擋、載入失敗）就先把音樂恢復；之後按控制列播放時 play 事件會再淡出
+    els.video.play().catch(() => { if (state.videoOpen && els.video.paused) { state.videoEnded = true; syncMusic(); } });
+    return;
+  }
+  if (ytFailed) { onGiftError(ytFailed); return; }
+  if (ytReady) { yt.seekTo(0, true); yt.playVideo(); } else ytPending = true;
+}
+
+function giftPause() {
+  if (!YT_ID) { els.video.pause(); return; }
+  ytPending = false;
+  if (ytReady) yt.pauseVideo();
+}
+
 function openVideo() {
   if (state.videoOpen) return;
   state.videoOpen = true;
@@ -355,10 +436,8 @@ function openVideo() {
   els.videoLayer.hidden = false;
   els.stage.inert = true;
   els.musicToggle.inert = true;
-  els.videoError.hidden = !els.video.error;
-  els.video.currentTime = 0; // 「再看一次」一律從頭播
-  // 播不起來（被擋、載入失敗）就先把音樂恢復；之後按控制列播放時 play 事件會再淡出
-  els.video.play().catch(() => { if (state.videoOpen && els.video.paused) { state.videoEnded = true; syncMusic(); } });
+  els.videoError.hidden = true;
+  giftPlayFromStart(); // 「再看一次」一律從頭播
   syncMusic();
   els.videoLayer.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 280, easing: 'ease-out' });
   els.videoClose.focus({ preventScroll: true });
@@ -366,7 +445,7 @@ function openVideo() {
 
 function closeVideo() {
   if (!state.videoOpen) return;
-  els.video.pause();
+  giftPause();
   state.videoOpen = false;
   els.stage.inert = false;
   els.musicToggle.inert = false;
@@ -377,16 +456,6 @@ function closeVideo() {
   $('giftBtn').focus({ preventScroll: true });
 }
 
-els.video.addEventListener('ended', () => { state.videoEnded = true; syncMusic(); });
-els.video.addEventListener('error', () => {
-  els.videoError.hidden = false;
-  state.videoEnded = true;
-  syncMusic();
-});
-els.video.addEventListener('playing', () => { els.videoError.hidden = true; });
-els.video.addEventListener('play', () => {
-  if (state.videoEnded) { state.videoEnded = false; syncMusic(); } // 用控制列重播時再淡出
-});
 els.videoClose.addEventListener('click', closeVideo);
 
 /* ==========================================================

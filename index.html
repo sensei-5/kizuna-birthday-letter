@@ -65,9 +65,10 @@
   <!-- 禮物影片 -->
   <div class="video-layer" id="videoLayer" role="dialog" aria-modal="true" aria-label="禮物影片" hidden>
     <div class="video-frame">
+      <div id="ytPlayer"></div>
       <video id="giftVideo" playsinline preload="metadata" controls></video>
     </div>
-    <p class="video-error" id="videoError" hidden>影片載入失敗，請確認 assets 裡的影片檔</p>
+    <p class="video-error" id="videoError" hidden></p>
     <button class="video-close" id="videoClose" type="button">關閉</button>
   </div>
 
