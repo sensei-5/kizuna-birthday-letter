@@ -441,6 +441,7 @@ button { font: inherit; color: inherit; }
 .next svg { width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
 .next:active:not(:disabled) { transform: scale(0.97); }
 .next:disabled { opacity: 0.3; cursor: not-allowed; }
+.next.is-off { visibility: hidden; }
 @media (hover: hover) and (pointer: fine) {
   .next:not(:disabled):hover { background: #2a3878; }
 }

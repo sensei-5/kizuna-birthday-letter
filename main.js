@@ -262,14 +262,14 @@ function canAdvance() {
   return p.kind !== 'final';
 }
 
-// 禮物頁之前都可以回上一頁修改答案
+// 第一頁以外都可以回上一頁
 function canRetreat() {
-  return state.page > 0 && PAGES[state.page].kind !== 'final';
+  return state.page > 0;
 }
 
 function updateNav() {
   const p = PAGES[state.page];
-  els.next.hidden = p.kind === 'final';
+  els.next.classList.toggle('is-off', p.kind === 'final'); // 只隱藏、保留位置，上一頁鈕才不會跳動
   els.next.disabled = !canAdvance();
   els.prev.classList.toggle('is-off', !canRetreat());
   [...els.progress.children].forEach((dot, i) => {
@@ -345,7 +345,8 @@ async function turn(dir) {
   state.page += dir;
   const to = pageEl(state.page);
   const kind = PAGES[state.page].kind;
-  const unlock = wait(kind === 'score' && !reduceMotion.matches ? CONFIG.scoreLockMs : CONFIG.turnLockMs);
+  const replayScore = kind === 'score' && dir > 0; // 從禮物頁退回成績頁時不重播，直接顯示 100 分
+  const unlock = wait(replayScore && !reduceMotion.matches ? CONFIG.scoreLockMs : CONFIG.turnLockMs);
 
   if (kind === 'final') prepareFinal();
   if (fromKind === 'score') {
@@ -373,7 +374,7 @@ async function turn(dir) {
     const active = document.activeElement;
     if (active && (els.pages.contains(active) || (active === els.prev && !canRetreat()))) els.paper.focus({ preventScroll: true });
   }
-  if (kind === 'score') celebrate(to);
+  if (replayScore) celebrate(to);
 
   await Promise.all([enter.finished, unlock]);
   state.busy = false;
