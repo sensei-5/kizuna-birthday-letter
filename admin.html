@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>留言管理</title>
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cpath fill='%23e8b85c' d='M25 9a12 12 0 1 0 7 19a10 10 0 1 1-7-19z'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&display=swap">
+  <link rel="stylesheet" href="wish.css?v=5">
+  <link rel="stylesheet" href="admin.css?v=1">
+</head>
+<body class="admin">
+  <div class="sky" aria-hidden="true">
+    <canvas id="sky"></canvas>
+    <div class="moon"><span class="moon-crater c1"></span><span class="moon-crater c2"></span><span class="moon-crater c3"></span></div>
+    <svg class="guitar" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice">
+      <g class="headstock">
+        <path class="headstock-body" d="M-40 800 C 40 790, 120 780, 196 790 L 214 990 C 140 1000, 40 1010, -40 1020 Z"/>
+        <rect class="nut" x="198" y="800" width="16" height="182" rx="3" transform="rotate(-4 206 891)"/>
+        <g class="pegs">
+          <circle cx="58" cy="826" r="13"/><circle cx="118" cy="818" r="13"/><circle cx="170" cy="812" r="13"/>
+          <circle cx="58" cy="988" r="13"/><circle cx="118" cy="980" r="13"/><circle cx="170" cy="972" r="13"/>
+        </g>
+      </g>
+      <g class="strings" id="strings"></g>
+    </svg>
+  </div>
+
+  <main class="card">
+    <p class="kicker">絆Kizuna 生日留言板</p>
+    <h1>留言管理</h1>
+
+    <p class="status" id="loading">載入中…</p>
+
+    <!-- 未登入 -->
+    <section id="signedOut" hidden>
+      <p class="note">請用已加入管理員名單的帳號登入。</p>
+      <div class="login-btns">
+        <button class="login twitch" id="loginTwitch" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.3 3 3 6.4v13.1h4.5V22h2.5l2.4-2.5h3.7L21 14.6V3H4.3zm15 10.8-2.9 2.9h-4.5l-2.4 2.4v-2.4H5.7V4.7h13.6v9.1zM16.4 7.6v4.9h-1.7V7.6h1.7zm-4.6 0v4.9h-1.7V7.6h1.7z"/></svg>
+          用 Twitch 登入
+        </button>
+        <button class="login google" id="loginGoogle" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M22.6 12.2c0-.8-.1-1.5-.2-2.2H12v4.2h5.9a5 5 0 0 1-2.2 3.3v2.7h3.6c2.1-1.9 3.3-4.8 3.3-8z"/><path fill="#34A853" d="M12 23c3 0 5.5-1 7.3-2.7l-3.6-2.8c-1 .7-2.2 1.1-3.7 1.1-2.9 0-5.3-1.9-6.2-4.5H2.1v2.8A11 11 0 0 0 12 23z"/><path fill="#FBBC05" d="M5.8 14.1a6.6 6.6 0 0 1 0-4.2V7.1H2.1a11 11 0 0 0 0 9.8l3.7-2.8z"/><path fill="#EA4335" d="M12 5.4c1.6 0 3.1.6 4.2 1.7l3.2-3.2A11 11 0 0 0 2.1 7.1l3.7 2.8C6.7 7.3 9.1 5.4 12 5.4z"/></svg>
+          用 Google 登入
+        </button>
+      </div>
+    </section>
+
+    <!-- 已登入但不是管理員 -->
+    <section id="notAdmin" hidden>
+      <p class="lead">這個帳號還不是管理員。</p>
+      <p class="note">把下面這行交給網站負責人，加入管理員名單後重新整理這頁即可：</p>
+      <pre class="sql" id="adminSql"></pre>
+      <button class="small-btn" id="copySql" type="button">複製</button>
+      <button class="link-btn" data-logout type="button">登出</button>
+    </section>
+
+    <!-- 管理員 -->
+    <section id="adminView" hidden>
+      <div class="who">
+        <img class="avatar" id="avatar" alt="" referrerpolicy="no-referrer">
+        <div class="who-text">
+          <span class="who-name" id="whoName"></span>
+          <span class="who-via">管理員</span>
+        </div>
+        <button class="link-btn" data-logout type="button">登出</button>
+      </div>
+
+      <div class="panel">
+        <div class="panel-state">
+          <span class="dot" id="stateDot"></span>
+          <span class="state-text" id="stateText"></span>
+          <span class="state-count" id="countText"></span>
+        </div>
+        <button class="toggle-btn" id="toggleBtn" type="button"></button>
+      </div>
+      <p class="form-error" id="adminError" role="alert" hidden></p>
+
+      <div class="tools">
+        <a class="small-btn" href="wish.html" target="_blank" rel="noopener">開啟留言頁</a>
+        <button class="small-btn" id="exportBtn" type="button">匯出全部留言</button>
+      </div>
+
+      <ol class="wish-list" id="wishList"></ol>
+      <p class="empty" id="emptyText" hidden>還沒有人留言。</p>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+  <script src="supabase-config.js?v=1"></script>
+  <script src="sky.js?v=1"></script>
+  <script src="admin.js?v=1"></script>
+</body>
+</html>

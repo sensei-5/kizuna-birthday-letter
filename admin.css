@@ -1,0 +1,118 @@
+/* 管理頁：沿用 wish.css，只補管理用的元件 */
+.admin { place-items: start center; }
+.admin .card { width: min(880px, 100%); margin: 24px 0; }
+
+.sql {
+  margin: 0 0 12px;
+  padding: 12px 14px;
+  font: 14px/1.5 ui-monospace, Consolas, monospace;
+  white-space: pre-wrap;
+  word-break: break-all;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(29, 40, 88, 0.2);
+  border-radius: 6px;
+}
+
+.small-btn {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 6px 16px;
+  font-size: 16px;
+  color: var(--ink);
+  text-decoration: none;
+  background: rgba(255, 255, 255, 0.6);
+  border: 2px solid rgba(29, 40, 88, 0.25);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: transform 140ms var(--ease-out), background-color 200ms ease;
+}
+.small-btn:active { transform: scale(0.97); }
+@media (hover: hover) and (pointer: fine) {
+  .small-btn:hover { background: #fff; }
+}
+
+/* 收件狀態 */
+.panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 14px 18px;
+  background: rgba(255, 255, 255, 0.65);
+  border: 2px solid rgba(29, 40, 88, 0.15);
+  border-radius: 10px;
+}
+.panel-state { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.dot { width: 12px; height: 12px; border-radius: 50%; background: #2f9e5b; box-shadow: 0 0 0 4px rgba(47, 158, 91, 0.18); }
+.dot.closed-dot { background: var(--red-pen); box-shadow: 0 0 0 4px rgba(204, 51, 70, 0.18); }
+.state-text { font-size: 20px; font-weight: 700; }
+.state-count { color: var(--ink-soft); font-size: 17px; }
+.toggle-btn {
+  min-height: 46px;
+  padding: 8px 22px;
+  font-size: 18px;
+  color: var(--paper);
+  background: var(--red-pen);
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: transform 140ms var(--ease-out), background-color 200ms ease, opacity 200ms ease;
+}
+.toggle-btn.reopen { background: var(--ink); }
+.toggle-btn:active:not(:disabled) { transform: scale(0.97); }
+.toggle-btn:disabled { opacity: 0.5; cursor: wait; }
+
+.tools { display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0 20px; }
+.admin .form-error { margin-top: 10px; }
+
+/* 留言清單 */
+.wish-list { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.wish-item {
+  display: grid;
+  grid-template-columns: 44px 1fr auto;
+  gap: 12px;
+  align-items: start;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.7);
+  border: 2px solid transparent;
+  border-radius: 10px;
+}
+.wish-item.is-new { animation: arrive 1.6s var(--ease-out); }
+@keyframes arrive { from { border-color: var(--gold); background: #fff6dc; } }
+.wish-item .avatar { width: 44px; height: 44px; }
+.wish-body { min-width: 0; }
+.wish-meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.wish-name { font-weight: 700; font-size: 18px; overflow-wrap: anywhere; }
+.wish-tag { font-size: 13px; padding: 1px 8px; border-radius: 999px; color: #fff; background: var(--twitch); }
+.wish-tag.google { background: #4a5482; }
+.wish-flag { font-size: 13px; padding: 1px 8px; border-radius: 999px; color: #8a5a00; background: #ffe8b0; }
+.wish-time { color: var(--ink-soft); font-size: 14px; }
+.wish-text { margin: 4px 0 0; font-size: 18px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+.del-btn {
+  min-height: 40px;
+  padding: 6px 14px;
+  font-size: 15px;
+  color: var(--red-pen);
+  background: transparent;
+  border: 2px solid rgba(204, 51, 70, 0.4);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background-color 200ms ease, border-color 200ms ease;
+}
+.del-btn:disabled { opacity: 0.5; cursor: wait; }
+@media (hover: hover) and (pointer: fine) {
+  .del-btn:hover { background: rgba(204, 51, 70, 0.08); border-color: var(--red-pen); }
+}
+.empty { color: var(--ink-soft); text-align: center; padding: 24px 0; }
+
+@media (max-width: 480px) {
+  .wish-item { grid-template-columns: 36px 1fr; }
+  .wish-item .avatar { width: 36px; height: 36px; }
+  .del-btn { grid-column: 2; justify-self: start; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wish-item.is-new { animation: none; }
+}
