@@ -25,9 +25,7 @@ const CONFIG = {
   // 吹蠟燭（麥克風）：吹不熄就調低 blowLevel；講話就誤觸就調高 blowFlatness 或 blowHoldMs
   // 網址加上 ?debug 會直接跳到蛋糕頁，並顯示麥克風收到的數值，方便校準
   blowLevel: 0.035,    // 音量門檻上限（RMS，0–1）；實際門檻會依背景噪音自動調低
-  blowLevelMin: 0.006, // 音量門檻下限（麥克風收音很小時用）
-  blowOverFloor: 4,    // 門檻 = 背景噪音 × 這個倍數
-  blowFlatness: 0.4,   // 低頻「像雜訊」的程度（0–1）：模擬時講話約 0.2–0.3、吹氣約 0.7
+  blowSensitivity: 6,  // 預設靈敏度 1–10（越大越容易吹熄）；?debug 頁面可以用拉桿調，會記在這台電腦的瀏覽器
   blowHoldMs: 450,     // 累積吹多久才全部熄滅（三根蠟燭依序熄）
 };
 
@@ -647,6 +645,7 @@ function cakeHTML() {
     + candles
     + '</svg></button></div>'
     + '<p class="cake-hint" id="cakeHint">準備好了就按「開始許願」</p>'
+    + '<label class="mic-tune" id="micTune" hidden>靈敏度 <input type="range" id="micTuneInput" min="1" max="10" step="1"> <b id="micTuneNum"></b>（越大越容易吹熄）</label>'
     + '<pre class="mic-debug" id="micDebug" hidden></pre>'
     + '<div class="wish-slot"><div class="mic-meter" id="micMeter" hidden><span id="micLevel"></span></div>'
     + '<button class="gift-btn wish-btn" id="wishBtn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3.5 3.5 0 0 0 3.5-3.5v-5a3.5 3.5 0 0 0-7 0v5A3.5 3.5 0 0 0 12 15zm6-3.5a6 6 0 0 1-12 0H4.5a7.5 7.5 0 0 0 6.75 7.46V21h1.5v-2.04a7.5 7.5 0 0 0 6.75-7.46z"/></svg>開始許願</button></div>'
@@ -687,7 +686,31 @@ let mic = null; // { stream, ctx, raf }
 const DEBUG = new URLSearchParams(location.search).has('debug');
 const blowOutDisabled = new URLSearchParams(location.search).has('nofire'); // ?debug&nofire：只看數值、不會真的吹熄
 
+// 靈敏度：在 ?debug 調好後存在瀏覽器，開台時同一台電腦就會沿用
+let blowSensitivity = CONFIG.blowSensitivity;
+try {
+  const saved = Number(localStorage.getItem('blowSensitivity'));
+  if (saved >= 1 && saved <= 10) blowSensitivity = saved;
+} catch (e) { /* 讀不到就用預設 */ }
+// 靈敏度越高：音量門檻（背景噪音的倍數）越低、「像吹氣」的要求越寬
+// 低頻雜訊度：模擬時講話約 0.2–0.3、吹氣約 0.7
+const blowOverFloor = () => 6 - blowSensitivity * 0.45; // 6 → 3.3 倍，10 → 1.5 倍
+const blowFlatness = () => 0.6 - blowSensitivity * 0.035; // 6 → 0.39，10 → 0.25
+// 音量門檻下限：只用來擋「完全沒聲音」的麥克風，靈敏度越高越低
+const blowLevelMin = () => 0.0002 * (11 - blowSensitivity); // 6 → 0.001
+
 function setupCake() {
+  if (DEBUG) {
+    const input = $('micTuneInput');
+    $('micTune').hidden = false;
+    input.value = blowSensitivity;
+    $('micTuneNum').textContent = blowSensitivity;
+    input.addEventListener('input', () => {
+      blowSensitivity = Number(input.value);
+      $('micTuneNum').textContent = blowSensitivity;
+      try { localStorage.setItem('blowSensitivity', String(blowSensitivity)); } catch (e) { /* 存不了就只用這次 */ }
+    });
+  }
   $('wishBtn').addEventListener('click', startWish);
   $('cake').addEventListener('click', () => blowOut()); // 備案：點蠟燭也能吹熄
   $('boardBtn').addEventListener('click', () => window.openBoard?.());
@@ -745,9 +768,10 @@ async function startWish() {
     const n = maxBin - lowBin;
     const flatness = Math.exp(logSum / n) / (linSum / n);
 
-    floor = Math.min(rms, floor * 1.003 + 1e-6); // 往下立刻跟、往上慢慢爬
-    const level = Math.min(CONFIG.blowLevel, Math.max(CONFIG.blowLevelMin, floor * CONFIG.blowOverFloor));
-    const blowing = rms > level && flatness > CONFIG.blowFlatness;
+    // 背景噪音：往下立刻跟；往上只在「沒在吹」時慢慢爬，吹氣時不會把門檻越墊越高
+    const level = Math.min(CONFIG.blowLevel, Math.max(blowLevelMin(), floor * blowOverFloor()));
+    floor = rms < level ? Math.min(rms, floor * 1.003 + 1e-6) : Math.min(floor, rms);
+    const blowing = rms > level && flatness > blowFlatness();
     score = blowing ? score + dt : Math.max(0, score - dt * 0.5);
 
     // 即時回饋：音量條、火焰跟著吹氣變小，蠟燭一根一根熄
@@ -762,7 +786,7 @@ async function startWish() {
       peakRms = Math.max(peakRms, rms); peakFlat = Math.max(peakFlat, flatness);
       debugEl.textContent = `麥克風：${stream.getAudioTracks()[0]?.label || '?'}\n`
         + `音量 ${rms.toFixed(4)}（3 秒內最大 ${peakRms.toFixed(4)}）目前門檻 ${level.toFixed(4)}（背景 ${floor.toFixed(4)}）\n`
-        + `雜訊度 ${flatness.toFixed(3)}（3 秒內最大 ${peakFlat.toFixed(3)}）門檻 ${CONFIG.blowFlatness}\n`
+        + `雜訊度 ${flatness.toFixed(3)}（3 秒內最大 ${peakFlat.toFixed(3)}）門檻 ${blowFlatness().toFixed(3)}\n`
         + (blowing ? '→ 判定：吹氣中' : '→ 判定：沒有吹');
       if (blowOutDisabled) { score = Math.min(score, CONFIG.blowHoldMs * 0.99); mic.raf = requestAnimationFrame(listen); return; }
     }

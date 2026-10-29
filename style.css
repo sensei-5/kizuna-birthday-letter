@@ -626,6 +626,16 @@ button { font: inherit; color: inherit; }
   margin-top: calc(var(--u) * 0.8);
 }
 .wish-btn { margin: 0; }
+.mic-tune {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5em;
+  margin-top: 0.4em;
+  font-size: 16px;
+  color: var(--ink);
+}
+.mic-tune input { width: 160px; accent-color: var(--red-pen); }
 .mic-debug {
   margin: 0.4em 0 0;
   padding: 0.5em 0.8em;
