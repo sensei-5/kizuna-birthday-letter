@@ -22,10 +22,11 @@ const CONFIG = {
   meteorPairChance: 0.3, // 偶爾一次來兩顆
   showerCount: 24,       // 成績頁的流星雨數量
 
-  // 吹蠟燭（麥克風）：吹不熄就調低 blowLevel；講話就誤觸就調高 blowFlatness
-  blowLevel: 0.08,     // 音量門檻（RMS，0–1）
-  blowFlatness: 0.25,  // 「像風聲」的程度（0–1，講話約 0.1、吹氣約 0.3 以上）
-  blowHoldMs: 350,     // 要連續吹多久才算
+  // 吹蠟燭（麥克風）：吹不熄就調低 blowLevel；講話就誤觸就調高 blowFlatness 或 blowHoldMs
+  // 網址加上 ?debug 會直接跳到蛋糕頁，並顯示麥克風收到的數值，方便校準
+  blowLevel: 0.035,    // 音量門檻（RMS，0–1）
+  blowFlatness: 0.4,   // 低頻「像雜訊」的程度（0–1）：模擬時講話約 0.2、吹氣約 0.6 以上
+  blowHoldMs: 300,     // 要連續吹多久才算
 };
 
 /* ==========================================================
@@ -342,7 +343,12 @@ async function openEnvelope() {
   }
   els.sceneEnvelope.hidden = true;
   els.sceneLetter.hidden = false;
-  pageEl(0).classList.add('is-current');
+  if (DEBUG) { // 偵錯：直接到蛋糕頁
+    state.giftWatched = true;
+    state.answers.fill(0);
+    state.page = PAGES.findIndex((p) => p.kind === 'cake');
+  }
+  pageEl(state.page).classList.add('is-current');
   updateNav();
   const enter = reduceMotion.matches
     ? [{ opacity: 0 }, { opacity: 1 }]
@@ -639,6 +645,7 @@ function cakeHTML() {
     + candles
     + '</svg></button></div>'
     + '<p class="cake-hint" id="cakeHint">準備好了就按「開始許願」</p>'
+    + '<pre class="mic-debug" id="micDebug" hidden></pre>'
     + '<div class="wish-slot"><div class="mic-meter" id="micMeter" hidden><span id="micLevel"></span></div>'
     + '<button class="gift-btn wish-btn" id="wishBtn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3.5 3.5 0 0 0 3.5-3.5v-5a3.5 3.5 0 0 0-7 0v5A3.5 3.5 0 0 0 12 15zm6-3.5a6 6 0 0 1-12 0H4.5a7.5 7.5 0 0 0 6.75 7.46V21h1.5v-2.04a7.5 7.5 0 0 0 6.75-7.46z"/></svg>開始許願</button></div>'
     + '<div class="wish-done" id="wishDone" hidden>'
@@ -675,6 +682,8 @@ function stickersHTML() {
 
 let blown = false;
 let mic = null; // { stream, ctx, raf }
+const DEBUG = new URLSearchParams(location.search).has('debug');
+const blowOutDisabled = new URLSearchParams(location.search).has('nofire'); // ?debug&nofire：只看數值、不會真的吹熄
 
 function setupCake() {
   $('wishBtn').addEventListener('click', startWish);
@@ -698,15 +707,20 @@ async function startWish() {
 
   const ctx = new (window.AudioContext || window.webkitAudioContext)();
   const analyser = ctx.createAnalyser();
-  analyser.fftSize = 1024;
+  analyser.fftSize = 2048;
   ctx.createMediaStreamSource(stream).connect(analyser);
   mic = { stream, ctx, raf: 0 };
+  const debugEl = DEBUG ? $('micDebug') : null;
+  if (debugEl) debugEl.hidden = false;
+  let peakRms = 0, peakFlat = 0, peakAt = 0;
   hint.textContent = '閉上眼睛許個願，然後對著麥克風吹一口氣～';
   $('micMeter').hidden = false;
 
   const time = new Float32Array(analyser.fftSize);
   const freq = new Float32Array(analyser.frequencyBinCount);
-  const maxBin = Math.floor((6000 / (ctx.sampleRate / 2)) * freq.length); // 只看 6kHz 以下
+  // 只看 40–1000Hz：對著麥克風吹氣的風切聲集中在低頻，而且在這段很平均；講話在這段有明顯的音高峰值
+  const hz = (f) => Math.round((f / (ctx.sampleRate / 2)) * freq.length);
+  const lowBin = Math.max(1, hz(40)), maxBin = hz(1000);
   let since = 0;
   const listen = (now) => {
     analyser.getFloatTimeDomainData(time);
@@ -716,15 +730,27 @@ async function startWish() {
     // 頻譜平坦度：吹氣像雜訊（平坦），講話有明顯的音高（不平坦）
     analyser.getFloatFrequencyData(freq);
     let logSum = 0, linSum = 0;
-    for (let b = 1; b < maxBin; b++) {
+    for (let b = lowBin; b < maxBin; b++) {
       const pw = Math.max(1e-12, 10 ** (freq[b] / 10));
       logSum += Math.log(pw); linSum += pw;
     }
-    const n = maxBin - 1;
+    const n = maxBin - lowBin;
     const flatness = Math.exp(logSum / n) / (linSum / n);
 
     $('micLevel').style.transform = `scaleX(${Math.min(1, rms / CONFIG.blowLevel)})`;
     const blowing = rms > CONFIG.blowLevel && flatness > CONFIG.blowFlatness;
+    if (debugEl) {
+      if (now - peakAt > 3000) { peakRms = 0; peakFlat = 0; peakAt = now; } // 每 3 秒重算最大值
+      peakRms = Math.max(peakRms, rms); peakFlat = Math.max(peakFlat, flatness);
+      debugEl.textContent = `麥克風：${stream.getAudioTracks()[0]?.label || '?'}
+`
+        + `音量 ${rms.toFixed(3)}（3 秒內最大 ${peakRms.toFixed(3)}）門檻 ${CONFIG.blowLevel}
+`
+        + `雜訊度 ${flatness.toFixed(3)}（3 秒內最大 ${peakFlat.toFixed(3)}）門檻 ${CONFIG.blowFlatness}
+`
+        + (blowing ? '→ 判定：吹氣中' : '→ 判定：沒有吹');
+      if (blowOutDisabled) { mic.raf = requestAnimationFrame(listen); return; }
+    }
     if (blowing) {
       since = since || now;
       if (now - since > CONFIG.blowHoldMs) { blowOut(); return; }
