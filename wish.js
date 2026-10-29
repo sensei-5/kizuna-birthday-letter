@@ -25,12 +25,19 @@ const els = {
   closedNote: $('closedNote'),
   loginBtns: document.querySelector('.login-btns'),
   loginNote: $('loginNote'),
+  deviceNote: $('deviceNote'),
 };
 
 let user = null;     // 登入的帳號
 let myWish = null;   // 已送出的留言（資料庫那一列）
 let isClosed = false;  // 是否已截止
 let saving = false;
+let deviceBlocked = false; // 這台裝置已經用別的帳號留過言
+
+// 同一台裝置只能留一則：記下在這台裝置留言的帳號（換瀏覽器 / 無痕就擋不住，只是減少重複）
+const DEVICE_KEY = 'wishAccount';
+function deviceAccount() { try { return localStorage.getItem(DEVICE_KEY); } catch (e) { return null; } }
+function rememberDevice() { try { localStorage.setItem(DEVICE_KEY, user.id); } catch (e) { /* 存不了就算了 */ } }
 
 // 簡單的字詞過濾：擋明顯的髒話，其餘交給管理員刪除
 const BLOCKED = ['幹你', '操你', '靠北', '靠杯', '去死', '白痴', '智障', '腦殘', '雞掰', '機掰', '王八', '婊子', '垃圾主播'];
@@ -76,10 +83,13 @@ function renderState() {
   els.submit.textContent = done ? '更新留言' : '送出祝福';
   els.saveHint.textContent = !done ? '' : isClosed ? '你的祝福已送出 ✓' : '已送出 ✓ 截止前都可以修改';
   els.saveHint.classList.toggle('saved', done);
+  const locked = isClosed || deviceBlocked;
   els.closedNote.hidden = !isClosed;
-  els.message.disabled = isClosed;
-  els.nameInput.disabled = isClosed;
-  els.submit.hidden = isClosed;
+  els.deviceNote.hidden = !deviceBlocked || isClosed;
+  els.form.classList.toggle('is-blocked', deviceBlocked); // 不能留言就收起輸入框
+  els.message.disabled = locked;
+  els.nameInput.disabled = locked;
+  els.submit.hidden = locked;
   els.loginBtns.hidden = isClosed; // 截止後未登入的人也不用再登入
   els.loginNote.hidden = isClosed;
   updateCount();
@@ -89,7 +99,7 @@ function updateCount() {
   const n = charLen(els.message.value.trim());
   els.count.textContent = `${n} / ${maxMessage}`;
   els.count.classList.toggle('over', n > maxMessage);
-  els.submit.disabled = isClosed || saving || n === 0 || n > maxMessage;
+  els.submit.disabled = isClosed || deviceBlocked || saving || n === 0 || n > maxMessage;
 }
 
 function showError(msg) {
@@ -123,7 +133,7 @@ db.channel('wish-settings')
 /* ============ 送出 ============ */
 els.form.addEventListener('submit', async (e) => {
   e.preventDefault();
-  if (saving || isClosed) return;
+  if (saving || isClosed || deviceBlocked) return;
   const message = els.message.value.trim();
   const display_name = els.nameInput.value.trim().slice(0, maxName); // Twitch 會被伺服器忽略
   if (!message || charLen(message) > maxMessage) return;
@@ -150,6 +160,7 @@ els.form.addEventListener('submit', async (e) => {
     else showError('送出失敗，請稍後再試一次。');
   } else {
     myWish = data;
+    rememberDevice();
     renderUser();
     window.sky?.pluckAll(); // 送出成功：撥一下吉他弦
   }
@@ -182,6 +193,10 @@ async function init() {
     return;
   }
   await loadMyWish();
+  // 自己的留言一律可以改；這個帳號還沒留過、但這台裝置已經用別的帳號留過，就不能再留
+  const other = deviceAccount();
+  if (myWish) rememberDevice();
+  else deviceBlocked = !!other && other !== user.id;
   renderUser();
   renderState();
   show('form');

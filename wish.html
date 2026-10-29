@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&display=swap">
-  <link rel="stylesheet" href="wish.css?v=4">
+  <link rel="stylesheet" href="wish.css?v=5">
 </head>
 <body>
   <div class="sky" aria-hidden="true">
@@ -66,6 +66,8 @@
         <button class="link-btn" id="logout" type="button">登出</button>
       </div>
 
+      <p class="closed" id="deviceNote" hidden>這台裝置已經用另一個帳號留過言了，謝謝你的祝福！</p>
+
       <label class="field" id="nameField" hidden>
         <span class="field-label">顯示名稱（可以填你的 YT 名字）</span>
         <input id="nameInput" type="text" autocomplete="nickname" maxlength="30">
@@ -92,6 +94,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
   <script src="supabase-config.js?v=1"></script>
   <script src="sky.js?v=1"></script>
-  <script src="wish.js?v=2"></script>
+  <script src="wish.js?v=4"></script>
 </body>
 </html>
