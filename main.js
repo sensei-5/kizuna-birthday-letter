@@ -24,9 +24,11 @@ const CONFIG = {
 
   // 吹蠟燭（麥克風）：吹不熄就調低 blowLevel；講話就誤觸就調高 blowFlatness 或 blowHoldMs
   // 網址加上 ?debug 會直接跳到蛋糕頁，並顯示麥克風收到的數值，方便校準
-  blowLevel: 0.035,    // 音量門檻（RMS，0–1）
-  blowFlatness: 0.4,   // 低頻「像雜訊」的程度（0–1）：模擬時講話約 0.2、吹氣約 0.6 以上
-  blowHoldMs: 300,     // 要連續吹多久才算
+  blowLevel: 0.035,    // 音量門檻上限（RMS，0–1）；實際門檻會依背景噪音自動調低
+  blowLevelMin: 0.006, // 音量門檻下限（麥克風收音很小時用）
+  blowOverFloor: 4,    // 門檻 = 背景噪音 × 這個倍數
+  blowFlatness: 0.4,   // 低頻「像雜訊」的程度（0–1）：模擬時講話約 0.2–0.3、吹氣約 0.7
+  blowHoldMs: 450,     // 累積吹多久才全部熄滅（三根蠟燭依序熄）
 };
 
 /* ==========================================================
@@ -721,8 +723,14 @@ async function startWish() {
   // 只看 40–1000Hz：對著麥克風吹氣的風切聲集中在低頻，而且在這段很平均；講話在這段有明顯的音高峰值
   const hz = (f) => Math.round((f / (ctx.sampleRate / 2)) * freq.length);
   const lowBin = Math.max(1, hz(40)), maxBin = hz(1000);
-  let since = 0;
+  // 門檻跟著環境自動校準：持續追蹤背景噪音，門檻 = 背景的幾倍（但不會比 blowLevel 更嚴）
+  let floor = 1;
+  let score = 0; // 累積吹氣時間（ms）；中途換氣只會慢慢扣，不會歸零
+  let last = performance.now();
+  const candles = [...document.querySelectorAll('.cake .candle')];
   const listen = (now) => {
+    const dt = Math.min(100, now - last);
+    last = now;
     analyser.getFloatTimeDomainData(time);
     let sum = 0;
     for (const v of time) sum += v * v;
@@ -737,24 +745,28 @@ async function startWish() {
     const n = maxBin - lowBin;
     const flatness = Math.exp(logSum / n) / (linSum / n);
 
-    $('micLevel').style.transform = `scaleX(${Math.min(1, rms / CONFIG.blowLevel)})`;
-    const blowing = rms > CONFIG.blowLevel && flatness > CONFIG.blowFlatness;
+    floor = Math.min(rms, floor * 1.003 + 1e-6); // 往下立刻跟、往上慢慢爬
+    const level = Math.min(CONFIG.blowLevel, Math.max(CONFIG.blowLevelMin, floor * CONFIG.blowOverFloor));
+    const blowing = rms > level && flatness > CONFIG.blowFlatness;
+    score = blowing ? score + dt : Math.max(0, score - dt * 0.5);
+
+    // 即時回饋：音量條、火焰跟著吹氣變小，蠟燭一根一根熄
+    $('micLevel').style.transform = `scaleX(${Math.min(1, rms / level)})`;
+    const cake = $('cake');
+    cake.style.setProperty('--blow', blowing ? Math.min(1, rms / level / 2) : 0);
+    const out = Math.floor((score / CONFIG.blowHoldMs) * candles.length);
+    candles.forEach((c, i) => c.classList.toggle('is-out', i < out));
+
     if (debugEl) {
       if (now - peakAt > 3000) { peakRms = 0; peakFlat = 0; peakAt = now; } // 每 3 秒重算最大值
       peakRms = Math.max(peakRms, rms); peakFlat = Math.max(peakFlat, flatness);
-      debugEl.textContent = `麥克風：${stream.getAudioTracks()[0]?.label || '?'}
-`
-        + `音量 ${rms.toFixed(3)}（3 秒內最大 ${peakRms.toFixed(3)}）門檻 ${CONFIG.blowLevel}
-`
-        + `雜訊度 ${flatness.toFixed(3)}（3 秒內最大 ${peakFlat.toFixed(3)}）門檻 ${CONFIG.blowFlatness}
-`
+      debugEl.textContent = `麥克風：${stream.getAudioTracks()[0]?.label || '?'}\n`
+        + `音量 ${rms.toFixed(4)}（3 秒內最大 ${peakRms.toFixed(4)}）目前門檻 ${level.toFixed(4)}（背景 ${floor.toFixed(4)}）\n`
+        + `雜訊度 ${flatness.toFixed(3)}（3 秒內最大 ${peakFlat.toFixed(3)}）門檻 ${CONFIG.blowFlatness}\n`
         + (blowing ? '→ 判定：吹氣中' : '→ 判定：沒有吹');
-      if (blowOutDisabled) { mic.raf = requestAnimationFrame(listen); return; }
+      if (blowOutDisabled) { score = Math.min(score, CONFIG.blowHoldMs * 0.99); mic.raf = requestAnimationFrame(listen); return; }
     }
-    if (blowing) {
-      since = since || now;
-      if (now - since > CONFIG.blowHoldMs) { blowOut(); return; }
-    } else since = 0;
+    if (score >= CONFIG.blowHoldMs) { blowOut(); return; }
     mic.raf = requestAnimationFrame(listen);
   };
   mic.raf = requestAnimationFrame(listen);
@@ -768,6 +780,8 @@ function stopListening() {
   mic = null;
   $('micMeter').hidden = true;
   if (!blown) {
+    $('cake').style.setProperty('--blow', 0);
+    document.querySelectorAll('.cake .candle').forEach((c) => c.classList.remove('is-out'));
     $('wishBtn').hidden = false;
     $('cakeHint').textContent = '準備好了就按「開始許願」';
   }
@@ -780,6 +794,7 @@ async function blowOut() {
   $('wishBtn').hidden = true;
   $('cakeHint').textContent = '';
   const cake = $('cake');
+  cake.style.setProperty('--blow', 0);
   cake.classList.add('is-out');
   cake.disabled = true;
   pluckAll();

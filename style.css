@@ -570,8 +570,10 @@ button { font: inherit; color: inherit; }
   50% { transform: scale(0.94, 1.06) rotate(2deg); }
   100% { transform: scale(1.04, 0.96) rotate(-1deg); }
 }
-.cake.is-out .flame { animation: none; opacity: 0; transform: scale(0.2, 0.4); }
-.cake.is-out .smoke { animation: smoke 1.6s ease-out forwards; }
+.cake.is-out .flame, .candle.is-out .flame { animation: none; opacity: 0; transform: scale(0.2, 0.4); }
+.cake.is-out .smoke, .candle.is-out .smoke { animation: smoke 1.6s ease-out forwards; }
+/* 吹氣時火焰變暗、縮小（--blow 由麥克風音量決定） */
+.flame-outer, .flame-inner, .flame-glow { opacity: calc(1 - var(--blow, 0) * 0.6); transition: opacity 120ms linear; }
 @keyframes smoke {
   0% { opacity: 0; transform: translateY(6px) scale(0.6); }
   25% { opacity: 1; }
