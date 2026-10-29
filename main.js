@@ -21,6 +21,11 @@ const CONFIG = {
   meteorEvery: [3, 6],   // 平常流星間隔（秒，隨機範圍）
   meteorPairChance: 0.3, // 偶爾一次來兩顆
   showerCount: 24,       // 成績頁的流星雨數量
+
+  // 吹蠟燭（麥克風）：吹不熄就調低 blowLevel；講話就誤觸就調高 blowFlatness
+  blowLevel: 0.08,     // 音量門檻（RMS，0–1）
+  blowFlatness: 0.25,  // 「像風聲」的程度（0–1，講話約 0.1、吹氣約 0.3 以上）
+  blowHoldMs: 350,     // 要連續吹多久才算
 };
 
 /* ==========================================================
@@ -36,13 +41,24 @@ const ESSAY = '問答題：請說一句現在此時此刻最想跟絆唱吉說�
 const NUMERALS = ['一', '二', '三', '四', '五'];
 const KEYS = ['A', 'B', 'C', 'D'];
 
+// 回顧短片（kind: 'clip'）：youtube 填網址或影片 ID；caption 是短片旁的文字，留空 '' 就只放短片
 const PAGES = [
   { kind: 'text', html: '<span class="line">首先，</span><span class="line">恭喜3.0募資成功、三週年快樂</span><span class="line">還有最重要的</span><span class="big">生日快樂</span>' },
+  { kind: 'text', html: '<span class="line">在週年紀念日裡，</span><span class="line">希望跟大家一起回顧</span><span class="line">一些特別的片段</span>' },
+  { kind: 'clip', youtube: 'https://youtube.com/shorts/XF5P75MUoIA', caption: '' },
+  { kind: 'clip', youtube: 'https://youtube.com/shorts/6iTpPFWlfKU', caption: '' },
+  { kind: 'clip', youtube: 'https://youtube.com/shorts/u3NtJbVkXWY', caption: '' },
+  { kind: 'clip', youtube: 'https://www.youtube.com/shorts/CFiv3WnW6Qw', caption: '' },
+  { kind: 'text', html: '<span class="line">雖然你真的很怪，但....</span>' },
+  { kind: 'text', html: '<span class="big">也很帥</span>' },
+  { kind: 'clip', youtube: 'https://youtube.com/shorts/Np53Ke76G2A', caption: '<span class="line">唱著平庸的你，</span><span class="line">其實一點也不平庸</span>' },
+  { kind: 'clip', youtube: 'https://youtube.com/shorts/t0Vo1RvpU88', caption: '<span class="line">確實，</span><span class="line">我們買了一張</span><span class="line">通往你的單程票</span>' },
   { kind: 'text', html: '<span class="line">再來，在這個特別的日子裡</span><span class="line">有個小測驗給你</span>' },
   ...QUIZ.map((q, i) => ({ kind: 'quiz', index: i, ...q })),
   { kind: 'essay' },
   { kind: 'score' },
   { kind: 'final' },
+  { kind: 'cake' },
 ];
 
 /* ==========================================================
@@ -57,6 +73,8 @@ const state = {
   musicOn: true,      // 使用者的音樂開關
   videoOpen: false,
   videoEnded: false,
+  giftWatched: false, // 禮物影片看完了，才出現往蛋糕頁的「下一頁」
+  clipPlaying: false, // 回顧短片播放中（背景音樂要讓開）
 };
 
 const $ = (id) => document.getElementById(id);
@@ -69,6 +87,7 @@ const els = {
   progress: $('progress'),
   next: $('nextBtn'),
   prev: $('prevBtn'),
+  progressNum: $('progressNum'),
   musicCtrl: $('musicCtrl'),
   musicToggle: $('musicToggle'),
   volumeBtn: $('volumeBtn'),
@@ -131,7 +150,7 @@ function waitForGesture() {
 }
 
 function syncMusic() {
-  const videoPlaying = state.videoOpen && !state.videoEnded;
+  const videoPlaying = (state.videoOpen && !state.videoEnded) || state.clipPlaying;
   const want = state.musicOn && !videoPlaying;
   if (want) {
     if (els.bgm.paused) {
@@ -166,7 +185,7 @@ function setBgmVolume(v) {
   bgmVolume = v;
   els.volumeSlider.value = String(Math.round(v * 100));
   els.volumeNum.textContent = String(Math.round(v * 100));
-  const audible = state.musicOn && !(state.videoOpen && !state.videoEnded) && !els.bgm.paused;
+  const audible = state.musicOn && !(state.videoOpen && !state.videoEnded) && !state.clipPlaying && !els.bgm.paused;
   if (audible) { clearInterval(fadeTimer); els.bgm.volume = v; }
 }
 function openVolume(open) {
@@ -235,6 +254,13 @@ function buildPages() {
       page.innerHTML = '<blockquote class="answer-quote" id="answerQuote" hidden></blockquote>'
         + '<p class="gift-line">給滿分的你一個禮物</p>'
         + '<button class="gift-btn" id="giftBtn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg><span id="giftLabel">打開禮物</span></button>';
+    } else if (p.kind === 'clip') {
+      // 播放器等翻到這頁才建立（不要一開信就載入六支影片）
+      if (!p.caption) page.classList.add('clip-only');
+      page.innerHTML = (p.caption ? `<p class="letter-text clip-caption">${p.caption}</p>` : '')
+        + `<div class="clip-frame"><div id="clip${i}"></div></div>`;
+    } else if (p.kind === 'cake') {
+      page.innerHTML = cakeHTML();
     }
     els.pages.appendChild(page);
 
@@ -243,6 +269,7 @@ function buildPages() {
     els.progress.appendChild(dot);
   });
   $('giftBtn').addEventListener('click', openVideo);
+  setupCake();
 }
 
 function pageEl(i) { return els.pages.children[i]; }
@@ -259,7 +286,8 @@ function choose(qIndex, k) {
 function canAdvance() {
   const p = PAGES[state.page];
   if (p.kind === 'quiz') return state.answers[p.index] !== null;
-  return p.kind !== 'final';
+  if (p.kind === 'final') return state.giftWatched;
+  return p.kind !== 'cake'; // 蛋糕頁是最後一頁，往下走的是「點開這裡」
 }
 
 // 第一頁以外都可以回上一頁
@@ -269,8 +297,10 @@ function canRetreat() {
 
 function updateNav() {
   const p = PAGES[state.page];
-  els.next.classList.toggle('is-off', p.kind === 'final'); // 只隱藏、保留位置，上一頁鈕才不會跳動
+  // 只隱藏、保留位置，上一頁鈕才不會跳動；禮物影片看完前不出現
+  els.next.classList.toggle('is-off', p.kind === 'cake' || (p.kind === 'final' && !state.giftWatched));
   els.next.disabled = !canAdvance();
+  els.progressNum.textContent = `${state.page + 1} / ${PAGES.length}`;
   els.prev.classList.toggle('is-off', !canRetreat());
   [...els.progress.children].forEach((dot, i) => {
     dot.classList.toggle('is-done', i < state.page);
@@ -353,6 +383,9 @@ async function turn(dir) {
     sparkles.length = 0; // 成績頁的星星不要飄到下一頁
     if (dir < 0) { from.classList.remove('is-graded'); $('scoreNum').textContent = '0'; } // 再進成績頁時重播數分數、畫紅圈
   }
+  if (fromKind === 'clip') pauseClip(state.page - dir); // 翻頁就停掉短片
+  if (fromKind === 'cake') stopListening();
+  if (kind === 'clip') ensureClip(state.page);
   pluck(state.page % 6);
 
   const rm = reduceMotion.matches;
@@ -419,12 +452,18 @@ function onGiftPlay() {
   els.videoError.hidden = true;
   if (state.videoOpen && state.videoEnded) { state.videoEnded = false; syncMusic(); } // 用控制列重播時再淡出
 }
-function onGiftEnded() { state.videoEnded = true; syncMusic(); }
+function onGiftEnded() { state.videoEnded = true; markGiftWatched(); syncMusic(); }
 function onGiftError(message) {
   els.videoError.textContent = message;
   els.videoError.hidden = false;
   state.videoEnded = true;
+  markGiftWatched(); // 影片壞掉也不能卡住，讓她能繼續往下
   syncMusic();
+}
+function markGiftWatched() {
+  if (state.giftWatched) return;
+  state.giftWatched = true;
+  updateNav();
 }
 
 function parseYoutubeId(s) {
@@ -439,9 +478,18 @@ let ytReady = false;
 let ytPending = false;  // 播放器還沒準備好時就按了禮物
 let ytFailed = '';      // API 載入失敗的訊息
 
+// YouTube IFrame API：禮物影片和回顧短片共用，只載入一次
+const ytApi = new Promise((resolve, reject) => {
+  window.onYouTubeIframeAPIReady = () => resolve(window.YT);
+  const api = document.createElement('script');
+  api.src = 'https://www.youtube.com/iframe_api';
+  api.onerror = reject;
+  document.head.appendChild(api);
+});
+
 if (YT_ID) {
   els.video.remove();
-  window.onYouTubeIframeAPIReady = () => {
+  ytApi.then(() => {
     yt = new YT.Player('ytPlayer', {
       videoId: YT_ID,
       playerVars: { playsinline: 1, rel: 0 },
@@ -463,11 +511,7 @@ if (YT_ID) {
           : `YouTube 影片無法播放（錯誤 ${e.data}）`),
       },
     });
-  };
-  const api = document.createElement('script');
-  api.src = 'https://www.youtube.com/iframe_api';
-  api.onerror = () => { ytFailed = 'YouTube 載入失敗，請檢查網路連線'; };
-  document.head.appendChild(api);
+  }).catch(() => { ytFailed = 'YouTube 載入失敗，請檢查網路連線'; });
 } else {
   $('ytPlayer').remove();
   els.video.src = CONFIG.videoSrc;
@@ -485,6 +529,47 @@ function giftPlayFromStart() {
   }
   if (ytFailed) { onGiftError(ytFailed); return; }
   if (ytReady) { yt.seekTo(0, true); yt.playVideo(); } else ytPending = true;
+}
+
+function giftNearEnd() {
+  if (!YT_ID) return els.video.duration > 0 && els.video.currentTime / els.video.duration >= 0.95;
+  if (!ytReady) return false;
+  const d = yt.getDuration();
+  return d > 0 && yt.getCurrentTime() / d >= 0.95;
+}
+
+/* ==========================================================
+   回顧短片：翻到那頁才建立播放器，由她自己按播放
+   ========================================================== */
+const clips = new Map(); // 頁碼 → YT.Player
+
+function ensureClip(i) {
+  if (clips.has(i)) return;
+  clips.set(i, null);
+  const id = parseYoutubeId(PAGES[i].youtube);
+  ytApi.then(() => {
+    const player = new YT.Player(`clip${i}`, {
+      videoId: id,
+      playerVars: { playsinline: 1, rel: 0 },
+      events: {
+        onReady: () => clips.set(i, player),
+        onStateChange: (e) => {
+          const playing = e.data === YT.PlayerState.PLAYING || e.data === YT.PlayerState.BUFFERING;
+          // 只有目前這頁的短片能讓背景音樂讓開
+          if (i !== state.page) return;
+          if (playing !== state.clipPlaying) { state.clipPlaying = playing; syncMusic(); }
+        },
+      },
+    });
+  }).catch(() => {
+    $(`clip${i}`).textContent = 'YouTube 載入失敗，請檢查網路連線';
+  });
+}
+
+function pauseClip(i) {
+  const player = clips.get(i);
+  if (player) player.pauseVideo();
+  if (state.clipPlaying) { state.clipPlaying = false; syncMusic(); }
 }
 
 function giftPause() {
@@ -510,6 +595,7 @@ function openVideo() {
 
 function closeVideo() {
   if (!state.videoOpen) return;
+  if (giftNearEnd()) markGiftWatched(); // 快播完才關掉也算看完
   giftPause();
   state.videoOpen = false;
   els.stage.inert = false;
@@ -522,6 +608,165 @@ function closeVideo() {
 }
 
 els.videoClose.addEventListener('click', closeVideo);
+
+/* ==========================================================
+   許願：蛋糕、對著麥克風吹蠟燭（麥克風不能用時點蠟燭也可以）
+   ========================================================== */
+const CANDLES = [110, 150, 190];
+
+function cakeHTML() {
+  const candles = CANDLES.map((x) => (
+    `<g class="candle"><rect x="${x - 6}" y="52" width="12" height="44" rx="3" class="candle-body"/>`
+    + `<path d="M${x - 6} 62 l12 -6 M${x - 6} 76 l12 -6 M${x - 6} 90 l12 -6" class="candle-stripe"/>`
+    + `<line x1="${x}" y1="52" x2="${x}" y2="45" class="wick"/>`
+    + `<g class="flame" style="transform-origin:${x}px 46px"><ellipse cx="${x}" cy="34" rx="12" ry="16" class="flame-glow"/>`
+    + `<path d="M${x} 18 C ${x + 9} 30, ${x + 8} 44, ${x} 46 C ${x - 8} 44, ${x - 9} 30, ${x} 18 Z" class="flame-outer"/>`
+    + `<path d="M${x} 30 C ${x + 4} 37, ${x + 4} 44, ${x} 45 C ${x - 4} 44, ${x - 4} 37, ${x} 30 Z" class="flame-inner"/></g>`
+    + `<g class="smoke" style="transform-origin:${x}px 40px"><circle cx="${x}" cy="38" r="4"/><circle cx="${x + 4}" cy="28" r="5"/><circle cx="${x - 2}" cy="16" r="6"/></g></g>`
+  )).join('');
+  return '<h2 class="cake-title">許願時間</h2>'
+    + '<div class="cake-wrap">'
+    + stickersHTML()
+    + '<button class="cake" id="cake" type="button" aria-label="吹熄蠟燭">'
+    + '<svg viewBox="0 0 300 240" aria-hidden="true">'
+    + '<ellipse cx="150" cy="226" rx="132" ry="13" class="plate"/>'
+    + '<rect x="40" y="148" width="220" height="76" rx="12" class="tier"/>'
+    + '<path d="M40 162 q0 -14 14 -14 h192 q14 0 14 14 v6 q-11 10 -22 0 q-11 12 -22 0 q-11 10 -22 0 q-11 12 -22 0 q-11 10 -22 0 q-11 12 -22 0 q-11 10 -22 0 q-11 12 -22 0 q-11 10 -22 0 q-11 12 -22 0 z" class="frost"/>'
+    + '<rect x="72" y="94" width="156" height="58" rx="10" class="tier tier-top"/>'
+    + '<path d="M72 106 q0 -12 12 -12 h132 q12 0 12 12 v5 q-10 9 -19.5 0 q-10 11 -19.5 0 q-10 9 -19.5 0 q-10 11 -19.5 0 q-10 9 -19.5 0 q-10 11 -19.5 0 q-10 9 -19.5 0 q-10 11 -19.5 0 z" class="frost"/>'
+    + '<g class="berries"><circle cx="70" cy="196" r="7"/><circle cx="110" cy="200" r="7"/><circle cx="150" cy="196" r="7"/><circle cx="190" cy="200" r="7"/><circle cx="230" cy="196" r="7"/></g>'
+    + '<g class="sprinkles"><rect x="95" y="128" width="8" height="3" rx="1.5" transform="rotate(-30 99 129)"/><rect x="140" y="132" width="8" height="3" rx="1.5" transform="rotate(20 144 133)"/><rect x="185" y="126" width="8" height="3" rx="1.5" transform="rotate(-50 189 127)"/><rect x="120" y="138" width="8" height="3" rx="1.5" transform="rotate(60 124 139)"/><rect x="200" y="140" width="8" height="3" rx="1.5" transform="rotate(10 204 141)"/></g>'
+    + candles
+    + '</svg></button></div>'
+    + '<p class="cake-hint" id="cakeHint">準備好了就按「開始許願」</p>'
+    + '<div class="wish-slot"><div class="mic-meter" id="micMeter" hidden><span id="micLevel"></span></div>'
+    + '<button class="gift-btn wish-btn" id="wishBtn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3.5 3.5 0 0 0 3.5-3.5v-5a3.5 3.5 0 0 0-7 0v5A3.5 3.5 0 0 0 12 15zm6-3.5a6 6 0 0 1-12 0H4.5a7.5 7.5 0 0 0 6.75 7.46V21h1.5v-2.04a7.5 7.5 0 0 0 6.75-7.46z"/></svg>開始許願</button></div>'
+    + '<div class="wish-done" id="wishDone" hidden>'
+    + '<p class="wish-done-big">祝你生日快樂</p>'
+    + '<p class="wish-done-line">最後一個小禮物，</p>'
+    + '<button class="gift-btn" id="boardBtn" type="button">點開這裡</button></div>';
+}
+
+// 蛋糕旁的奇怪貼圖（之後可以換成實況貼圖）
+function stickersHTML() {
+  const s = (cls, body) => `<svg class="sticker ${cls}" viewBox="0 0 100 100" aria-hidden="true">${body}</svg>`;
+  return s('st-ghost', // 恐遊
+    '<path d="M20 90 V45 a30 30 0 0 1 60 0 V90 l-10 -8 -10 8 -10 -8 -10 8 -10 -8 z" fill="#fffaf0" stroke="#1d2858" stroke-width="4" stroke-linejoin="round"/>'
+    + '<circle cx="40" cy="45" r="5" fill="#1d2858"/><circle cx="60" cy="45" r="5" fill="#1d2858"/><ellipse cx="50" cy="60" rx="5" ry="7" fill="#1d2858"/>'
+    + '<ellipse cx="32" cy="56" rx="5" ry="3" fill="#f2a7b3"/><ellipse cx="68" cy="56" rx="5" ry="3" fill="#f2a7b3"/>')
+    + s('st-chick', // 小雞汁
+      '<ellipse cx="50" cy="62" rx="30" ry="26" fill="#ffd84d" stroke="#1d2858" stroke-width="4"/><circle cx="50" cy="36" r="20" fill="#ffd84d" stroke="#1d2858" stroke-width="4"/>'
+      + '<path d="M44 22 q4 -12 8 0 q4 -10 7 1" fill="none" stroke="#1d2858" stroke-width="3" stroke-linecap="round"/>'
+      + '<circle cx="43" cy="34" r="3.5" fill="#1d2858"/><circle cx="57" cy="34" r="3.5" fill="#1d2858"/><path d="M45 42 l5 7 l5 -7 z" fill="#e8873a" stroke="#1d2858" stroke-width="2.5" stroke-linejoin="round"/>'
+      + '<path d="M26 62 q-10 -2 -8 8" fill="none" stroke="#1d2858" stroke-width="4" stroke-linecap="round"/>')
+    + s('st-melon', // 拍西瓜
+      '<path d="M10 40 a40 40 0 0 0 80 0 z" fill="#3f9a57" stroke="#1d2858" stroke-width="4" stroke-linejoin="round"/><path d="M17 40 a33 33 0 0 0 66 0 z" fill="#ff6b7a"/>'
+      + '<g fill="#1d2858"><ellipse cx="35" cy="52" rx="2.5" ry="4"/><ellipse cx="50" cy="60" rx="2.5" ry="4"/><ellipse cx="65" cy="52" rx="2.5" ry="4"/><ellipse cx="50" cy="47" rx="2.5" ry="4"/></g>')
+    + s('st-hat', // 派對帽
+      '<path d="M50 8 L80 88 H20 Z" fill="#cc3346" stroke="#1d2858" stroke-width="4" stroke-linejoin="round"/><path d="M36 50 L64 40 M28 72 L72 58" stroke="#ffd84d" stroke-width="7" stroke-linecap="round"/>'
+      + '<circle cx="50" cy="9" r="8" fill="#ffd84d" stroke="#1d2858" stroke-width="3.5"/>')
+    + s('st-note', // 歌回
+      '<path d="M38 74 V20 l40 -8 v52" fill="none" stroke="#1d2858" stroke-width="6" stroke-linejoin="round"/><ellipse cx="30" cy="76" rx="12" ry="9" fill="#e8b85c" stroke="#1d2858" stroke-width="4"/>'
+      + '<ellipse cx="70" cy="66" rx="12" ry="9" fill="#e8b85c" stroke="#1d2858" stroke-width="4"/><circle cx="27" cy="74" r="2" fill="#1d2858"/><circle cx="33" cy="74" r="2" fill="#1d2858"/>')
+    + s('st-star',
+      '<path d="M50 6 L61 37 H94 L67 56 L77 88 L50 69 L23 88 L33 56 L6 37 H39 Z" fill="#ffd84d" stroke="#1d2858" stroke-width="4" stroke-linejoin="round"/>'
+      + '<path d="M38 50 h8 M54 50 h8" stroke="#1d2858" stroke-width="4" stroke-linecap="round"/><path d="M42 60 q8 7 16 0" fill="none" stroke="#1d2858" stroke-width="3.5" stroke-linecap="round"/>');
+}
+
+let blown = false;
+let mic = null; // { stream, ctx, raf }
+
+function setupCake() {
+  $('wishBtn').addEventListener('click', startWish);
+  $('cake').addEventListener('click', () => blowOut()); // 備案：點蠟燭也能吹熄
+  $('boardBtn').addEventListener('click', () => window.openBoard?.());
+}
+
+async function startWish() {
+  const hint = $('cakeHint');
+  $('wishBtn').hidden = true;
+  hint.textContent = '正在開啟麥克風…';
+  let stream;
+  try {
+    // 關掉降噪 / 自動增益，不然吹氣聲會被濾掉
+    stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+  } catch (e) {
+    hint.textContent = '沒辦法使用麥克風，直接點一下蠟燭也能吹熄喔';
+    return;
+  }
+  if (blown || PAGES[state.page].kind !== 'cake') { stream.getTracks().forEach((t) => t.stop()); return; }
+
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const analyser = ctx.createAnalyser();
+  analyser.fftSize = 1024;
+  ctx.createMediaStreamSource(stream).connect(analyser);
+  mic = { stream, ctx, raf: 0 };
+  hint.textContent = '閉上眼睛許個願，然後對著麥克風吹一口氣～';
+  $('micMeter').hidden = false;
+
+  const time = new Float32Array(analyser.fftSize);
+  const freq = new Float32Array(analyser.frequencyBinCount);
+  const maxBin = Math.floor((6000 / (ctx.sampleRate / 2)) * freq.length); // 只看 6kHz 以下
+  let since = 0;
+  const listen = (now) => {
+    analyser.getFloatTimeDomainData(time);
+    let sum = 0;
+    for (const v of time) sum += v * v;
+    const rms = Math.sqrt(sum / time.length);
+    // 頻譜平坦度：吹氣像雜訊（平坦），講話有明顯的音高（不平坦）
+    analyser.getFloatFrequencyData(freq);
+    let logSum = 0, linSum = 0;
+    for (let b = 1; b < maxBin; b++) {
+      const pw = Math.max(1e-12, 10 ** (freq[b] / 10));
+      logSum += Math.log(pw); linSum += pw;
+    }
+    const n = maxBin - 1;
+    const flatness = Math.exp(logSum / n) / (linSum / n);
+
+    $('micLevel').style.transform = `scaleX(${Math.min(1, rms / CONFIG.blowLevel)})`;
+    const blowing = rms > CONFIG.blowLevel && flatness > CONFIG.blowFlatness;
+    if (blowing) {
+      since = since || now;
+      if (now - since > CONFIG.blowHoldMs) { blowOut(); return; }
+    } else since = 0;
+    mic.raf = requestAnimationFrame(listen);
+  };
+  mic.raf = requestAnimationFrame(listen);
+}
+
+function stopListening() {
+  if (!mic) return;
+  cancelAnimationFrame(mic.raf);
+  mic.stream.getTracks().forEach((t) => t.stop());
+  mic.ctx.close();
+  mic = null;
+  $('micMeter').hidden = true;
+  if (!blown) {
+    $('wishBtn').hidden = false;
+    $('cakeHint').textContent = '準備好了就按「開始許願」';
+  }
+}
+
+async function blowOut() {
+  if (blown) return;
+  blown = true;
+  stopListening();
+  $('wishBtn').hidden = true;
+  $('cakeHint').textContent = '';
+  const cake = $('cake');
+  cake.classList.add('is-out');
+  cake.disabled = true;
+  pluckAll();
+  await wait(reduceMotion.matches ? 300 : 1400);
+  const done = $('wishDone');
+  done.hidden = false;
+  if (!reduceMotion.matches) {
+    done.animate([{ opacity: 0, transform: 'translateY(16px) scale(0.96)' }, { opacity: 1, transform: 'none' }],
+      { duration: 600, easing: 'cubic-bezier(0.23, 1, 0.32, 1)' });
+  }
+  meteorShower();
+  $('boardBtn').focus({ preventScroll: true });
+}
 
 /* ==========================================================
    鍵盤：空白鍵 / 右方向鍵翻頁，A–D 或 1–4 選答案

@@ -8,7 +8,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&display=swap">
-  <link rel="stylesheet" href="style.css?v=4">
+  <link rel="stylesheet" href="style.css?v=6">
+  <link rel="stylesheet" href="board.css?v=2">
 </head>
 <body>
   <!-- 夜空：星星（canvas）、月亮、吉他弦 -->
@@ -63,6 +64,7 @@
         <div class="paper-foot">
           <button class="prev is-off" id="prevBtn" type="button" aria-label="上一頁"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H6M11 6l-6 6 6 6"/></svg><span class="prev-label">上一頁</span></button>
           <ol class="progress" id="progress" aria-label="進度"></ol>
+          <span class="progress-num" id="progressNum" aria-hidden="true"></span>
           <button class="next" id="nextBtn" type="button">下一頁<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6"/></svg></button>
         </div>
       </div>
@@ -82,8 +84,25 @@
     <button class="video-close" id="videoClose" type="button">關閉</button>
   </div>
 
+  <!-- 觀眾留言板（蛋糕頁「點開這裡」） -->
+  <section class="board-layer" id="boardLayer" aria-label="大家的祝福" hidden>
+    <header class="board-head">
+      <h2 class="board-title">大家的祝福</h2>
+      <p class="board-count" id="boardCount"></p>
+    </header>
+    <div class="board-cloud" id="boardCloud"></div>
+    <p class="board-empty" id="boardEmpty" hidden>還沒有人留言</p>
+    <div class="board-actions">
+      <button class="board-btn" id="boardSave" type="button">保存成圖片</button>
+      <button class="board-btn ghost" id="boardBack" type="button">回到信</button>
+    </div>
+  </section>
+
   <audio id="bgm" loop preload="auto"></audio>
 
-  <script src="main.js?v=4"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+  <script src="supabase-config.js?v=1"></script>
+  <script src="main.js?v=6"></script>
+  <script src="board.js?v=2"></script>
 </body>
 </html>
