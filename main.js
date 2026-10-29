@@ -25,7 +25,7 @@ const CONFIG = {
   // 吹蠟燭（麥克風）：吹不熄就調低 blowLevel；講話就誤觸就調高 blowFlatness 或 blowHoldMs
   // 網址加上 ?debug 會直接跳到蛋糕頁，並顯示麥克風收到的數值，方便校準
   blowLevel: 0.035,    // 音量門檻上限（RMS，0–1）；實際門檻會依背景噪音自動調低
-  blowSensitivity: 6,  // 預設靈敏度 1–10（越大越容易吹熄）；?debug 頁面可以用拉桿調，會記在這台電腦的瀏覽器
+  blowSensitivity: 1,  // 預設靈敏度 1–10（越大越容易吹熄）；主播麥克風好又有降噪，用最不易誤觸的 1；?debug 頁面可以用拉桿調，會記在這台電腦的瀏覽器
   blowHoldMs: 450,     // 累積吹多久才全部熄滅（三根蠟燭依序熄）
 };
 
