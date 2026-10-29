@@ -151,6 +151,7 @@ els.form.addEventListener('submit', async (e) => {
   } else {
     myWish = data;
     renderUser();
+    window.sky?.pluckAll(); // 送出成功：撥一下吉他弦
   }
   renderState();
 });
@@ -186,37 +187,3 @@ async function init() {
   show('form');
 }
 init();
-
-/* ============ 夜空：微微閃爍的星星 ============ */
-(() => {
-  const canvas = $('sky');
-  const ctx = canvas.getContext('2d');
-  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
-  let W = 0, H = 0, stars = [];
-  function resize() {
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    W = innerWidth; H = innerHeight;
-    canvas.width = W * dpr; canvas.height = H * dpr;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const n = Math.min(400, Math.round((W * H) / 4200));
-    stars = Array.from({ length: n }, () => ({
-      x: Math.random() * W, y: Math.random() * H,
-      r: Math.random() * 1.2 + 0.3, p: Math.random() * Math.PI * 2, s: Math.random() * 1.5 + 0.5,
-    }));
-  }
-  function draw(t) {
-    ctx.clearRect(0, 0, W, H);
-    for (const s of stars) {
-      const a = reduce.matches ? 0.7 : 0.45 + 0.4 * Math.sin(s.p + (t / 1000) * s.s);
-      ctx.globalAlpha = a;
-      ctx.fillStyle = '#f3e6c2';
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    if (!reduce.matches) requestAnimationFrame(draw);
-  }
-  resize();
-  addEventListener('resize', () => { resize(); if (reduce.matches) draw(0); });
-  requestAnimationFrame(draw);
-})();
