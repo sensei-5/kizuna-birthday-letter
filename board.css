@@ -35,6 +35,11 @@
 .board-empty { margin: auto; color: var(--string); font-size: max(18px, calc(var(--u) * 2)); }
 
 .wish-card {
+  display: block;
+  font-family: inherit;
+  text-align: left;
+  border: 0;
+  cursor: zoom-in;
   max-width: min(22em, 92%);
   padding: 0.6em 0.85em 0.7em;
   font-size: calc(1em * var(--size, 1));
@@ -47,7 +52,7 @@
 .wish-card-head { display: flex; align-items: center; gap: 0.45em; margin-bottom: 0.3em; }
 .wish-card-avatar { width: 1.6em; height: 1.6em; flex: none; border-radius: 50%; object-fit: cover; background: var(--night-soft); }
 .wish-card-name { font-size: 0.78em; font-weight: 700; color: var(--ink-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.wish-card-text { margin: 0; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; }
+.wish-card-text { display: block; margin: 0; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; }
 
 @media (prefers-reduced-motion: no-preference) {
   .wish-card { animation: drift var(--dur, 6s) ease-in-out var(--delay, 0s) infinite alternate; }
@@ -81,4 +86,72 @@
 @media (hover: hover) and (pointer: fine) {
   .board-btn:not(.ghost):hover { background: #fff6dc; }
   .board-btn.ghost:hover { border-color: var(--moon); }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .wish-card:hover { box-shadow: 0 0 0 3px var(--gold), 0 0.4em 1.2em rgba(3, 6, 20, 0.45); }
+}
+
+/* ============ 點開單張留言 ============ */
+.wish-zoom {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: max(12px, calc(var(--u) * 2));
+  padding: 16px;
+  background: rgba(5, 8, 22, 0.78);
+}
+.zoom-card {
+  width: min(42em, 100%);
+  max-height: 86vh;
+  overflow-y: auto;
+  padding: max(20px, calc(var(--u) * 2.6)) max(22px, calc(var(--u) * 3.2));
+  font-size: max(18px, calc(var(--u) * 1.6));
+  color: var(--ink);
+  background: var(--paper);
+  border-radius: 10px;
+  box-shadow: 0 1em 3em rgba(3, 6, 20, 0.6);
+}
+.zoom-head { display: flex; align-items: center; gap: 0.7em; }
+.zoom-avatar { width: 3.2em; height: 3.2em; flex: none; border-radius: 50%; object-fit: cover; background: var(--night-soft); }
+.zoom-name { font-size: 1.4em; font-weight: 700; overflow-wrap: anywhere; }
+.zoom-text { margin: 0.8em 0 0; font-size: 2em; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+.zoom-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 1.2em; }
+.zoom-pos { color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.zoom-close {
+  min-height: 44px;
+  padding: 0.3em 1.2em;
+  font: inherit;
+  color: var(--paper);
+  background: var(--ink);
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.zoom-nav {
+  flex: none;
+  width: max(48px, calc(var(--u) * 4));
+  height: max(48px, calc(var(--u) * 4));
+  display: grid;
+  place-items: center;
+  padding: 0;
+  color: var(--moon);
+  background: var(--night-soft);
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: opacity 200ms ease, background-color 200ms ease;
+}
+.zoom-nav svg { width: 55%; height: 55%; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.zoom-nav:disabled { opacity: 0.25; cursor: default; }
+@media (hover: hover) and (pointer: fine) {
+  .zoom-nav:not(:disabled):hover { background: #222c5c; }
+}
+@media (max-width: 600px) {
+  .wish-zoom { flex-wrap: wrap; align-content: center; }
+  .zoom-card { order: -1; width: 100%; }
+  .zoom-text { font-size: 1.5em; }
 }

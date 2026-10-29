@@ -879,7 +879,7 @@ document.addEventListener('keydown', (e) => {
 
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Tab') tabbing = true;
-  if (state.videoOpen) return;
+  if (state.videoOpen || !$('boardLayer').hidden) return; // 留言板蓋在信上面時不翻頁
   if (isTyping(e.target) || e.ctrlKey || e.metaKey || e.altKey) return;
 
   if (e.key === ' ' && isKeyboardFocusedButton(e.target)) return;
@@ -900,7 +900,7 @@ document.addEventListener('keydown', (e) => {
   }
 });
 document.addEventListener('keyup', (e) => {
-  if (e.key === ' ' && !isTyping(e.target) && !isKeyboardFocusedButton(e.target) && !state.videoOpen) e.preventDefault();
+  if (e.key === ' ' && !isTyping(e.target) && !isKeyboardFocusedButton(e.target) && !state.videoOpen && $('boardLayer').hidden) e.preventDefault();
 });
 
 /* ==========================================================

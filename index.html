@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&display=swap">
   <link rel="stylesheet" href="style.css?v=10">
-  <link rel="stylesheet" href="board.css?v=2">
+  <link rel="stylesheet" href="board.css?v=3">
 </head>
 <body>
   <!-- 夜空：星星（canvas）、月亮、吉他弦 -->
@@ -96,13 +96,30 @@
       <button class="board-btn" id="boardSave" type="button">保存成圖片</button>
       <button class="board-btn ghost" id="boardBack" type="button">回到信</button>
     </div>
+
+    <!-- 點開單張留言 -->
+    <div class="wish-zoom" id="wishZoom" role="dialog" aria-modal="true" aria-label="留言" hidden>
+      <button class="zoom-nav" id="zoomPrev" type="button" aria-label="上一則"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <div class="zoom-card" id="zoomCard">
+        <div class="zoom-head">
+          <img class="zoom-avatar" id="zoomAvatar" alt="" crossorigin="anonymous" referrerpolicy="no-referrer">
+          <span class="zoom-name" id="zoomName"></span>
+        </div>
+        <p class="zoom-text" id="zoomText"></p>
+        <div class="zoom-foot">
+          <span class="zoom-pos" id="zoomPos"></span>
+          <button class="zoom-close" id="zoomClose" type="button">關閉</button>
+        </div>
+      </div>
+      <button class="zoom-nav" id="zoomNext" type="button" aria-label="下一則"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
+    </div>
   </section>
 
   <audio id="bgm" loop preload="auto"></audio>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
   <script src="supabase-config.js?v=1"></script>
-  <script src="main.js?v=15"></script>
-  <script src="board.js?v=2"></script>
+  <script src="main.js?v=16"></script>
+  <script src="board.js?v=3"></script>
 </body>
 </html>

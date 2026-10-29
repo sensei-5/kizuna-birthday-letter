@@ -32,8 +32,12 @@
 
   function card(w, isNew) {
     const look = lookOf(w.id, w.message);
-    const el = document.createElement('article');
+    // 卡片是按鈕：留言多、字變小時，點開來看大字
+    const el = document.createElement('button');
+    el.type = 'button';
     el.className = 'wish-card' + (isNew ? ' is-new' : '');
+    el.setAttribute('aria-label', `${w.display_name}：${w.message}`);
+    el.addEventListener('click', () => openZoom(w.id));
     el.dataset.id = w.id;
     el.style.setProperty('--tilt', `${look.tilt}deg`);
     el.style.setProperty('--size', look.size);
@@ -41,7 +45,7 @@
     el.style.setProperty('--delay', `${look.delay}s`);
     el.style.setProperty('--dur', `${look.dur}s`);
 
-    const head = document.createElement('div');
+    const head = document.createElement('span');
     head.className = 'wish-card-head';
     const img = document.createElement('img');
     img.className = 'wish-card-avatar';
@@ -54,12 +58,62 @@
     name.textContent = w.display_name;
     head.append(img, name);
 
-    const text = document.createElement('p');
+    const text = document.createElement('span');
     text.className = 'wish-card-text';
     text.textContent = w.message;
     el.append(head, text);
     return el;
   }
+
+  /* ============ 點開單張卡片 ============ */
+  const zoom = $('wishZoom');
+  let zoomId = null;
+  function cardIds() { return [...cloud.children].map((el) => Number(el.dataset.id)); }
+
+  function showZoom(id) {
+    const w = wishes.get(id);
+    if (!w) { closeZoom(); return; }
+    zoomId = id;
+    const img = $('zoomAvatar');
+    if (w.avatar_url) img.src = w.avatar_url; else img.removeAttribute('src');
+    $('zoomName').textContent = w.display_name;
+    $('zoomText').textContent = w.message;
+    const ids = cardIds();
+    const i = ids.indexOf(id);
+    $('zoomPos').textContent = `${i + 1} / ${ids.length}`;
+    $('zoomPrev').disabled = i <= 0;
+    $('zoomNext').disabled = i >= ids.length - 1;
+  }
+  function openZoom(id) {
+    showZoom(id);
+    zoom.hidden = false;
+    if (!reduceMotion.matches) {
+      $('zoomCard').animate([{ opacity: 0, transform: 'scale(0.9)' }, { opacity: 1, transform: 'none' }],
+        { duration: 260, easing: 'cubic-bezier(0.23, 1, 0.32, 1)' });
+    }
+    $('zoomClose').focus({ preventScroll: true });
+  }
+  function closeZoom() {
+    if (zoom.hidden) return;
+    zoom.hidden = true;
+    cloud.querySelector(`[data-id="${zoomId}"]`)?.focus({ preventScroll: true });
+    zoomId = null;
+  }
+  function stepZoom(d) {
+    const ids = cardIds();
+    const next = ids[ids.indexOf(zoomId) + d];
+    if (next !== undefined) showZoom(next);
+  }
+  $('zoomClose').addEventListener('click', closeZoom);
+  $('zoomPrev').addEventListener('click', () => stepZoom(-1));
+  $('zoomNext').addEventListener('click', () => stepZoom(1));
+  zoom.addEventListener('click', (e) => { if (e.target === zoom) closeZoom(); }); // 點外面關閉
+  document.addEventListener('keydown', (e) => {
+    if (layer.hidden || zoom.hidden) return;
+    if (e.key === 'Escape') { e.preventDefault(); closeZoom(); }
+    else if (e.key === 'ArrowLeft') { e.preventDefault(); stepZoom(-1); }
+    else if (e.key === 'ArrowRight') { e.preventDefault(); stepZoom(1); }
+  });
 
   function updateCount() {
     countEl.textContent = wishes.size ? `共 ${wishes.size} 則祝福` : '';
@@ -82,6 +136,7 @@
       if (old) old.replaceWith(el); else cloud.append(el);
     }
     updateCount();
+    if (zoomId !== null) showZoom(zoomId);
   }
 
   // 留言多的時候縮小字級，盡量一個畫面放得下（太多就捲動）
@@ -128,6 +183,7 @@
     $('boardSave').focus({ preventScroll: true });
   };
   $('boardBack').addEventListener('click', () => {
+    closeZoom();
     layer.hidden = true;
     stage.inert = false;
     stage.getAnimations().forEach((a) => a.cancel());
@@ -160,7 +216,7 @@
         height: window.innerHeight,
         windowWidth: window.innerWidth,
         windowHeight: window.innerHeight,
-        ignoreElements: (el) => el.classList?.contains('board-actions') || el.id === 'musicCtrl' || el.classList?.contains('stage'),
+        ignoreElements: (el) => el.classList?.contains('board-actions') || el.id === 'wishZoom' || el.id === 'musicCtrl' || el.classList?.contains('stage'),
       });
       const a = document.createElement('a');
       a.href = canvas.toDataURL('image/png');
