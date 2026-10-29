@@ -511,7 +511,9 @@ button { font: inherit; color: inherit; }
   justify-content: center;
   gap: calc(var(--u) * 4);
 }
-.clip-caption { flex: 1; min-width: 0; }
+.clip-side { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: calc(var(--u) * 2); }
+.clip-caption { margin: 0; }
+.clip-gif { width: max(96px, calc(var(--u) * 11)); aspect-ratio: 1; object-fit: contain; border-radius: 12px; }
 .clip-frame {
   flex: none;
   height: 100%;
@@ -537,15 +539,23 @@ button { font: inherit; color: inherit; }
   margin: calc(var(--u) * 0.6) 0;
 }
 .cake {
-  display: block;
+  position: relative;
   width: 70%;
   margin: 0 auto;
+}
+/* 每根蠟燭上的透明按鈕（點熄用） */
+.candle-hit {
+  position: absolute;
+  top: 2%;
+  width: 12%;
+  height: 40%;
   padding: 0;
   background: none;
   border: 0;
+  border-radius: 999px;
   cursor: pointer;
 }
-.cake:disabled { cursor: default; }
+.candle-hit:disabled { cursor: default; }
 .cake svg { display: block; width: 100%; height: auto; overflow: visible; }
 .plate { fill: #e9dfc8; }
 .tier { fill: #fff4e0; stroke: var(--ink); stroke-width: 3; }
@@ -693,7 +703,9 @@ button { font: inherit; color: inherit; }
   .progress { display: none; }
   .progress-num { display: block; }
   .page-clip { flex-direction: column; justify-content: flex-start; gap: 12px; }
-  .clip-caption { flex: none; font-size: 20px; }
+  .clip-side { flex: none; flex-direction: row; align-items: center; justify-content: space-between; gap: 12px; }
+  .clip-caption { font-size: 20px; }
+  .clip-gif { width: 72px; flex: none; }
   .clip-frame { flex: 1; min-height: 0; height: auto; width: auto; }
   .page-cake { justify-content: safe center; }
   .cake-wrap { width: 78%; } /* 留空間給兩側的貼圖 */

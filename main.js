@@ -25,7 +25,7 @@ const CONFIG = {
   // 吹蠟燭（麥克風）：吹不熄就調低 blowLevel；講話就誤觸就調高 blowFlatness 或 blowHoldMs
   // 網址加上 ?debug 會直接跳到蛋糕頁，並顯示麥克風收到的數值，方便校準
   blowLevel: 0.035,    // 音量門檻上限（RMS，0–1）；實際門檻會依背景噪音自動調低
-  blowSensitivity: 1,  // 預設靈敏度 1–10（越大越容易吹熄）；主播麥克風好又有降噪，用最不易誤觸的 1；?debug 頁面可以用拉桿調，會記在這台電腦的瀏覽器
+  blowSensitivity: 5,  // 預設靈敏度 1–10（越大越容易吹熄）；?debug 頁面可以用拉桿調，會記在這台電腦的瀏覽器
   blowHoldMs: 450,     // 累積吹多久才全部熄滅（三根蠟燭依序熄）
 };
 
@@ -42,14 +42,14 @@ const ESSAY = '問答題：請說一句現在此時此刻最想跟絆唱吉說�
 const NUMERALS = ['一', '二', '三', '四', '五'];
 const KEYS = ['A', 'B', 'C', 'D'];
 
-// 回顧短片（kind: 'clip'）：youtube 填網址或影片 ID；caption 是短片旁的文字，留空 '' 就只放短片
+// 回顧短片（kind: 'clip'）：youtube 填網址或影片 ID；caption 是短片旁的文字（留空 '' 就只放短片）；gif 是文字下方的貼圖
 const PAGES = [
   { kind: 'text', html: '<span class="line">首先，</span><span class="line">恭喜3.0募資成功、三週年快樂</span><span class="line">還有最重要的</span><span class="big">生日快樂</span>' },
   { kind: 'text', html: '<span class="line">在週年紀念日裡，</span><span class="line">希望跟大家一起回顧</span><span class="line">一些特別的片段</span>' },
-  { kind: 'clip', youtube: 'https://youtube.com/shorts/XF5P75MUoIA', caption: '' },
-  { kind: 'clip', youtube: 'https://youtube.com/shorts/6iTpPFWlfKU', caption: '' },
-  { kind: 'clip', youtube: 'https://youtube.com/shorts/u3NtJbVkXWY', caption: '' },
-  { kind: 'clip', youtube: 'https://www.youtube.com/shorts/CFiv3WnW6Qw', caption: '' },
+  { kind: 'clip', youtube: 'https://youtube.com/shorts/XF5P75MUoIA', gif: 'assets/P3.gif', caption: '<span class="line">看你快被嚇死，</span><span class="line">雖然於心不忍，</span><span class="line">但真的會笑死</span>' },
+  { kind: 'clip', youtube: 'https://youtube.com/shorts/6iTpPFWlfKU', gif: 'assets/P4.gif', caption: '<span class="line">想當初，</span><span class="line">我就是這樣</span><span class="line">被騙進來的...</span>' },
+  { kind: 'clip', youtube: 'https://youtube.com/shorts/u3NtJbVkXWY', gif: 'assets/P5.gif', caption: '<span class="line">到現在還是想不通</span><span class="line">這幾個字</span><span class="line">怎麼湊在一起的</span>' },
+  { kind: 'clip', youtube: 'https://www.youtube.com/shorts/CFiv3WnW6Qw', gif: 'assets/P6.gif', caption: '<span class="line">今年聖誕，</span><span class="line">秋主播還來嗎?</span>' },
   { kind: 'text', html: '<span class="line">雖然你真的很怪，但....</span>' },
   { kind: 'text', html: '<span class="big">也很帥</span>' },
   { kind: 'clip', youtube: 'https://youtube.com/shorts/Np53Ke76G2A', caption: '<span class="line">唱著平庸的你，</span><span class="line">其實一點也不平庸</span>' },
@@ -256,9 +256,11 @@ function buildPages() {
         + '<p class="gift-line">給滿分的你一個禮物</p>'
         + '<button class="gift-btn" id="giftBtn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg><span id="giftLabel">打開禮物</span></button>';
     } else if (p.kind === 'clip') {
-      // 播放器等翻到這頁才建立（不要一開信就載入六支影片）
-      if (!p.caption) page.classList.add('clip-only');
-      page.innerHTML = (p.caption ? `<p class="letter-text clip-caption">${p.caption}</p>` : '')
+      // 播放器和 GIF 都等翻到這頁才載入（不要一開信就載入全部）
+      if (!p.caption && !p.gif) page.classList.add('clip-only');
+      const side = (p.caption ? `<p class="letter-text clip-caption">${p.caption}</p>` : '')
+        + (p.gif ? `<img class="clip-gif" data-src="${p.gif}" alt="">` : '');
+      page.innerHTML = (side ? `<div class="clip-side">${side}</div>` : '')
         + `<div class="clip-frame"><div id="clip${i}"></div></div>`;
     } else if (p.kind === 'cake') {
       page.innerHTML = cakeHTML();
@@ -551,6 +553,8 @@ const clips = new Map(); // 頁碼 → YT.Player
 
 function ensureClip(i) {
   if (clips.has(i)) return;
+  const gif = pageEl(i).querySelector('.clip-gif');
+  if (gif) gif.src = gif.dataset.src;
   clips.set(i, null);
   const id = parseYoutubeId(PAGES[i].youtube);
   ytApi.then(() => {
@@ -633,7 +637,7 @@ function cakeHTML() {
   return '<h2 class="cake-title">許願時間</h2>'
     + '<div class="cake-wrap">'
     + stickersHTML()
-    + '<button class="cake" id="cake" type="button" aria-label="吹熄蠟燭">'
+    + '<div class="cake" id="cake">'
     + '<svg viewBox="0 0 300 240" aria-hidden="true">'
     + '<ellipse cx="150" cy="226" rx="132" ry="13" class="plate"/>'
     + '<rect x="40" y="148" width="220" height="76" rx="12" class="tier"/>'
@@ -643,7 +647,9 @@ function cakeHTML() {
     + '<g class="berries"><circle cx="70" cy="196" r="7"/><circle cx="110" cy="200" r="7"/><circle cx="150" cy="196" r="7"/><circle cx="190" cy="200" r="7"/><circle cx="230" cy="196" r="7"/></g>'
     + '<g class="sprinkles"><rect x="95" y="128" width="8" height="3" rx="1.5" transform="rotate(-30 99 129)"/><rect x="140" y="132" width="8" height="3" rx="1.5" transform="rotate(20 144 133)"/><rect x="185" y="126" width="8" height="3" rx="1.5" transform="rotate(-50 189 127)"/><rect x="120" y="138" width="8" height="3" rx="1.5" transform="rotate(60 124 139)"/><rect x="200" y="140" width="8" height="3" rx="1.5" transform="rotate(10 204 141)"/></g>'
     + candles
-    + '</svg></button></div>'
+    + '</svg>'
+    + CANDLES.map((x, i) => `<button class="candle-hit" type="button" data-i="${i}" style="left:${((x - 18) / 300) * 100}%" aria-label="吹熄第 ${i + 1} 根蠟燭"></button>`).join('')
+    + '</div></div>'
     + '<p class="cake-hint" id="cakeHint">準備好了就按「開始許願」</p>'
     + '<label class="mic-tune" id="micTune" hidden>靈敏度 <input type="range" id="micTuneInput" min="1" max="10" step="1"> <b id="micTuneNum"></b>（越大越容易吹熄）</label>'
     + '<pre class="mic-debug" id="micDebug" hidden></pre>'
@@ -683,6 +689,19 @@ function stickersHTML() {
 
 let blown = false;
 let mic = null; // { stream, ctx, raf }
+const clickedOut = new Set(); // 被點熄的蠟燭
+
+// 熄掉的蠟燭 = 麥克風吹熄的前 micOut 根 + 被點熄的；三根都熄了就許願完成
+function syncCandles(micOut) {
+  const candles = document.querySelectorAll('.cake .candle');
+  let all = true;
+  candles.forEach((c, i) => {
+    const out = i < micOut || clickedOut.has(i);
+    c.classList.toggle('is-out', out);
+    if (!out) all = false;
+  });
+  if (all) blowOut();
+}
 const DEBUG = new URLSearchParams(location.search).has('debug');
 const blowOutDisabled = new URLSearchParams(location.search).has('nofire'); // ?debug&nofire：只看數值、不會真的吹熄
 
@@ -712,7 +731,12 @@ function setupCake() {
     });
   }
   $('wishBtn').addEventListener('click', startWish);
-  $('cake').addEventListener('click', () => blowOut()); // 備案：點蠟燭也能吹熄
+  // 備案：麥克風吹不熄時，三根蠟燭分別點熄
+  document.querySelectorAll('.candle-hit').forEach((btn) => btn.addEventListener('click', () => {
+    clickedOut.add(Number(btn.dataset.i));
+    btn.disabled = true;
+    syncCandles(0);
+  }));
   $('boardBtn').addEventListener('click', () => window.openBoard?.());
 }
 
@@ -779,7 +803,8 @@ async function startWish() {
     const cake = $('cake');
     cake.style.setProperty('--blow', blowing ? Math.min(1, rms / level / 2) : 0);
     const out = Math.floor((score / CONFIG.blowHoldMs) * candles.length);
-    candles.forEach((c, i) => c.classList.toggle('is-out', i < out));
+    syncCandles(out);
+    if (blown) return;
 
     if (debugEl) {
       if (now - peakAt > 3000) { peakRms = 0; peakFlat = 0; peakAt = now; } // 每 3 秒重算最大值
@@ -805,7 +830,7 @@ function stopListening() {
   $('micMeter').hidden = true;
   if (!blown) {
     $('cake').style.setProperty('--blow', 0);
-    document.querySelectorAll('.cake .candle').forEach((c) => c.classList.remove('is-out'));
+    syncCandles(0); // 只留下被點熄的
     $('wishBtn').hidden = false;
     $('cakeHint').textContent = '準備好了就按「開始許願」';
   }
@@ -820,7 +845,7 @@ async function blowOut() {
   const cake = $('cake');
   cake.style.setProperty('--blow', 0);
   cake.classList.add('is-out');
-  cake.disabled = true;
+  document.querySelectorAll('.candle-hit').forEach((b) => { b.disabled = true; });
   pluckAll();
   await wait(reduceMotion.matches ? 300 : 1400);
   const done = $('wishDone');
