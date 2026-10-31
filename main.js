@@ -500,7 +500,7 @@ if (YT_ID) {
   ytApi.then(() => {
     yt = new YT.Player('ytPlayer', {
       videoId: YT_ID,
-      playerVars: { playsinline: 1, rel: 0 },
+      playerVars: { playsinline: 1, rel: 0, origin: location.origin },
       events: {
         onReady: () => {
           ytReady = true;
@@ -560,7 +560,7 @@ function ensureClip(i) {
   ytApi.then(() => {
     const player = new YT.Player(`clip${i}`, {
       videoId: id,
-      playerVars: { playsinline: 1, rel: 0 },
+      playerVars: { playsinline: 1, rel: 0, origin: location.origin },
       events: {
         onReady: () => clips.set(i, player),
         onStateChange: (e) => {

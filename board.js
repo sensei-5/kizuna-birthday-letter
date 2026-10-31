@@ -208,16 +208,28 @@
     try {
       if (!window.html2canvas) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
       layer.classList.add('is-capturing'); // 拍照時停掉漂浮動畫、收起按鈕
+      const scale = Math.max(2, window.devicePixelRatio || 1);
       const canvas = await window.html2canvas(document.body, {
         backgroundColor: '#0c1330',
         useCORS: true,
-        scale: Math.max(2, window.devicePixelRatio || 1),
+        scale,
         width: window.innerWidth,
         height: window.innerHeight,
         windowWidth: window.innerWidth,
         windowHeight: window.innerHeight,
         ignoreElements: (el) => el.classList?.contains('board-actions') || el.id === 'wishZoom' || el.id === 'musicCtrl' || el.classList?.contains('stage'),
       });
+      // 右下角小小的署名
+      const g = canvas.getContext('2d');
+      const W = window.innerWidth, H = window.innerHeight;
+      g.save();
+      g.scale(scale, scale);
+      g.font = `${Math.max(12, W / 110)}px ${getComputedStyle(document.body).fontFamily}`;
+      g.fillStyle = 'rgba(243, 230, 194, 0.7)';
+      g.textAlign = 'right';
+      g.textBaseline = 'alphabetic';
+      g.fillText(`絆Kizuna 生日快樂 · ${new Date().toISOString().slice(0, 10)}`, W - 16, H - 14);
+      g.restore();
       const a = document.createElement('a');
       a.href = canvas.toDataURL('image/png');
       a.download = `絆Kizuna生日祝福-${new Date().toISOString().slice(0, 10)}.png`;
